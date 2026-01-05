@@ -1,94 +1,105 @@
-package dev.lrxh.neptune.game.kit.command;
+package dev.lrxh.neptune.profile.listener;
 
-import com.jonahseguin.drink.annotation.Command;
-import com.jonahseguin.drink.annotation.Sender;
+import dev.lrxh.api.events.MatchParticipantDeathEvent;
 import dev.lrxh.neptune.API;
+import dev.lrxh.neptune.Neptune;
 import dev.lrxh.neptune.configs.impl.MessagesLocale;
-import dev.lrxh.neptune.game.kit.Kit;
-import dev.lrxh.neptune.game.kit.menu.editor.KitEditorMenu;
-import dev.lrxh.neptune.game.kit.menu.editor.button.KitEditorSelectButton;
+import dev.lrxh.neptune.feature.hotbar.HotbarService;
+import dev.lrxh.neptune.game.match.Match;
+import dev.lrxh.neptune.game.match.impl.participant.DeathCause;
+import dev.lrxh.neptune.game.match.impl.participant.Participant;
+import dev.lrxh.neptune.profile.ProfileService;
 import dev.lrxh.neptune.profile.data.ProfileState;
 import dev.lrxh.neptune.profile.impl.Profile;
 import dev.lrxh.neptune.providers.clickable.Replacement;
 import dev.lrxh.neptune.utils.CC;
+import dev.lrxh.neptune.utils.GithubUtils;
 import dev.lrxh.neptune.utils.PlayerUtil;
+import dev.lrxh.neptune.utils.ServerUtils;
+import dev.lrxh.neptune.utils.tasks.NeptuneRunnable;
+import dev.lrxh.neptune.utils.tasks.TaskScheduler;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerLoginEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 
-import java.util.Arrays;
+public class ProfileListener implements Listener {
 
-public class KitEditorCommand {
-
-    @Command(name = "menu", desc = "")
-    public void open(@Sender Player player) {
-        Profile profile = API.getProfile(player);
-        if (profile == null) return;
-        if (profile.hasState(ProfileState.IN_LOBBY, ProfileState.IN_PARTY)) {
-            new KitEditorMenu().open(player);
-        }
+    @EventHandler
+    public void onPreJoin(PlayerLoginEvent event) {
+        if (!Neptune.get().isAllowJoin())
+            event.disallow(PlayerLoginEvent.Result.KICK_OTHER, CC.color("&cDatabasing updating..."));
     }
 
-    @Command(name = "edit", desc = "", usage = "<kit>")
-    public void edit(@Sender Player player, Kit kit) {
-        if (player == null) return;
-        Profile profile = API.getProfile(player);
-        if (profile.hasState(ProfileState.IN_LOBBY, ProfileState.IN_PARTY)) {
-            new KitEditorSelectButton(0, kit).onClick(ClickType.LEFT, player);
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+
+        if (player.getName().equals("lrxh_")) {
+            player.sendMessage(CC.color("&eThis server is running Neptune version: "
+                    + Neptune.get().getPluginMeta().getVersion()));
+            player.sendMessage(CC.color("&eCommit: &f" + GithubUtils.getCommitId()));
+            player.sendMessage(CC.color("&eMessage: &f" + GithubUtils.getCommitMessage()));
         }
+        event.joinMessage(null);
+
+        ProfileService.get().createProfile(player)
+                .thenAccept(unused -> TaskScheduler.get().startTask(new NeptuneRunnable() {
+                    @Override
+                    public void run() {
+                        PlayerUtil.teleportToSpawn(player.getUniqueId());
+
+                        if (!MessagesLocale.JOIN_MESSAGE.getString().equals("NONE")) {
+                            ServerUtils.broadcast(MessagesLocale.JOIN_MESSAGE,
+                                    new Replacement("<player>", player.getName()));
+                        }
+                        PlayerUtil.reset(player);
+                        HotbarService.get().giveItems(player);
+                    }
+                }));
     }
 
-    @Command(name = "reset", desc = "", usage = "<kit>")
-    public void reset(@Sender Player player, Kit kit) {
-        if (player == null) return;
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        event.quitMessage(null);
+        Player player = event.getPlayer();
         Profile profile = API.getProfile(player);
+        if (profile == null)
+            return;
+        Match match = profile.getMatch();
 
-        profile.getGameData().get(kit).setKitLoadout(kit.getItems());
-
-        if (profile.hasState(ProfileState.IN_KIT_EDITOR) && profile.getGameData().getKitEditor() != null) {
-            if (profile.getGameData().getKitEditor().equals(kit)) {
-                kit.giveLoadout(player.getUniqueId());
-                player.updateInventory();
+        if (match != null) {
+            if (profile.getState() == ProfileState.IN_SPECTATOR) {
+                match.removeSpectator(player.getUniqueId(), true);
+            } else {
+                Participant participant = match.getParticipant(player.getUniqueId());
+                if (participant == null)
+                    return;
+                match.onLeave(match.getParticipant(player), true);
+                MatchParticipantDeathEvent deathEvent = new MatchParticipantDeathEvent(match, participant, DeathCause.DISCONNECT.getMessage().toString());
+                Bukkit.getPluginManager().callEvent(deathEvent);
             }
         }
 
-        MessagesLocale.KIT_EDITOR_RESET.send(player.getUniqueId(), new Replacement("<kit>", kit.getDisplayName()));
-    }
-
-    @Command(name = "save", desc = "")
-    public void save(@Sender Player player) {
-        Profile profile = API.getProfile(player);
-        if (profile == null) return;
-        if (!profile.hasState(ProfileState.IN_KIT_EDITOR)) return;
-        if (profile.getGameData().getKitEditor() == null) return;
-
-        Kit kit = profile.getGameData().getKitEditor();
-        profile.getGameData().get(kit).setKitLoadout(Arrays.asList(player.getInventory().getContents()));
-
-        player.sendMessage(CC.color("&a✔ Layout kit saved"));
-        PlayerUtil.sendActionBar(player, CC.color("&a✔ Layout kit saved"));
-    }
-
-    @Command(name = "exit", desc = "")
-    public void exit(@Sender Player player) {
-        Profile profile = API.getProfile(player);
-        if (profile == null) return;
-        if (!profile.hasState(ProfileState.IN_KIT_EDITOR)) return;
-        if (profile.getGameData().getKitEditor() == null) return;
-
-        Kit kit = profile.getGameData().getKitEditor();
-        profile.getGameData().get(kit).setKitLoadout(Arrays.asList(player.getInventory().getContents()));
-
-        player.sendMessage(CC.color("&a✔ Layout kit saved"));
-        PlayerUtil.sendActionBar(player, CC.color("&a✔ Layout kit saved"));
-
-        profile.getGameData().setKitEditor(null);
-
-        if (profile.getGameData().getParty() == null) {
-            profile.setState(ProfileState.IN_LOBBY);
-        } else {
-            profile.setState(ProfileState.IN_PARTY);
+        if (!MessagesLocale.LEAVE_MESSAGE.getString().equals("NONE")) {
+            ServerUtils.broadcast(MessagesLocale.LEAVE_MESSAGE, new Replacement("<player>", player.getName()));
         }
 
-        PlayerUtil.teleportToSpawn(player.getUniqueId());
+        ProfileService.get().removeProfile(player.getUniqueId());
+    }
+
+    @EventHandler
+    public void onInventoryClose(InventoryCloseEvent event) {
+        Player player = (Player) event.getPlayer();
+        Profile profile = API.getProfile(player);
+        if (profile == null) return;
+
+        if (profile.hasState(ProfileState.IN_KIT_EDITOR)) {
+            return;
+        }
     }
 }

@@ -12,6 +12,7 @@ import dev.lrxh.neptune.profile.impl.Profile;
 import dev.lrxh.neptune.providers.clickable.Replacement;
 import dev.lrxh.neptune.utils.CC;
 import dev.lrxh.neptune.utils.PlayerUtil;
+import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 
@@ -65,7 +66,7 @@ public class KitEditorCommand {
         profile.getGameData().get(kit).setKitLoadout(Arrays.asList(player.getInventory().getContents()));
 
         player.sendMessage(CC.color("&a✔ Layout kit saved"));
-        PlayerUtil.sendActionBar(player, CC.color("&a✔ Layout kit saved"));
+        player.sendActionBar(Component.text(CC.color("&a✔ Layout kit saved")));
     }
 
     @Command(name = "exit", desc = "")
@@ -79,7 +80,7 @@ public class KitEditorCommand {
         profile.getGameData().get(kit).setKitLoadout(Arrays.asList(player.getInventory().getContents()));
 
         player.sendMessage(CC.color("&a✔ Layout kit saved"));
-        PlayerUtil.sendActionBar(player, CC.color("&a✔ Layout kit saved"));
+        player.sendActionBar(Component.text(CC.color("&a✔ Layout kit saved")));
 
         profile.getGameData().setKitEditor(null);
 

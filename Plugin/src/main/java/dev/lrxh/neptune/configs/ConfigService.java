@@ -55,6 +55,5 @@ public class ConfigService {
         MenusLocale.FILTER_NAME.load();
         ScoreboardLocale.TITLE.load();
         CosmeticsLocale.LIGHTNING_DISPLAY_NAME.load();
-        kitEditorLocationConfig.load();
     }
 }

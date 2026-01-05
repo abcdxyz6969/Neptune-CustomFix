@@ -4,12 +4,14 @@ import dev.lrxh.neptune.API;
 import dev.lrxh.neptune.configs.impl.MenusLocale;
 import dev.lrxh.neptune.configs.impl.MessagesLocale;
 import dev.lrxh.neptune.game.kit.Kit;
+import dev.lrxh.neptune.game.kit.KitEditorLocationService;
 import dev.lrxh.neptune.profile.data.ProfileState;
 import dev.lrxh.neptune.profile.impl.Profile;
 import dev.lrxh.neptune.providers.clickable.Replacement;
 import dev.lrxh.neptune.utils.ItemBuilder;
 import dev.lrxh.neptune.utils.ItemUtils;
 import dev.lrxh.neptune.utils.menu.Button;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
@@ -32,6 +34,11 @@ public class KitEditorSelectButton extends Button {
         profile.getGameData().setKitEditor(kit);
         profile.setState(ProfileState.IN_KIT_EDITOR);
 
+        Location loc = KitEditorLocationService.getLocation();
+        if (loc != null) {
+            player.teleport(loc);
+        }
+
         kit.giveLoadout(player.getUniqueId());
 
         player.updateInventory();
@@ -39,8 +46,12 @@ public class KitEditorSelectButton extends Button {
 
     @Override
     public ItemStack getItemStack(Player player) {
-        return new ItemBuilder(kit.getIcon()).name(MenusLocale.KIT_EDITOR_SELECT_KIT_NAME.getString().replace("<kit>", kit.getDisplayName()))
-                .lore(ItemUtils.getLore(MenusLocale.KIT_EDITOR_SELECT_LORE.getStringList(), new Replacement("<kit>", kit.getDisplayName())), player)
+        return new ItemBuilder(kit.getIcon())
+                .name(MenusLocale.KIT_EDITOR_SELECT_KIT_NAME.getString().replace("<kit>", kit.getDisplayName()))
+                .lore(ItemUtils.getLore(
+                        MenusLocale.KIT_EDITOR_SELECT_LORE.getStringList(),
+                        new Replacement("<kit>", kit.getDisplayName())
+                ), player)
                 .build();
     }
 }

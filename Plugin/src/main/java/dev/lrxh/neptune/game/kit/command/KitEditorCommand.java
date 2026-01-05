@@ -10,6 +10,8 @@ import dev.lrxh.neptune.game.kit.menu.editor.button.KitEditorSelectButton;
 import dev.lrxh.neptune.profile.data.ProfileState;
 import dev.lrxh.neptune.profile.impl.Profile;
 import dev.lrxh.neptune.providers.clickable.Replacement;
+import dev.lrxh.neptune.utils.CC;
+import dev.lrxh.neptune.utils.PlayerUtil;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 
@@ -20,8 +22,7 @@ public class KitEditorCommand {
     @Command(name = "menu", desc = "")
     public void open(@Sender Player player) {
         Profile profile = API.getProfile(player);
-        if (profile == null)
-            return;
+        if (profile == null) return;
         if (profile.hasState(ProfileState.IN_LOBBY, ProfileState.IN_PARTY)) {
             new KitEditorMenu().open(player);
         }
@@ -38,24 +39,56 @@ public class KitEditorCommand {
 
     @Command(name = "reset", desc = "", usage = "<kit>")
     public void reset(@Sender Player player, Kit kit) {
-        if (player == null)
-            return;
+        if (player == null) return;
         Profile profile = API.getProfile(player);
 
         profile.getGameData().get(kit).setKitLoadout(kit.getItems());
 
-        if (profile.hasState(ProfileState.IN_KIT_EDITOR)) {
-            profile.getGameData().get(profile.getGameData().getKitEditor())
-                    .setKitLoadout(Arrays.asList(player.getInventory().getContents()));
-
-            MessagesLocale.KIT_EDITOR_STOP.send(player.getUniqueId(), new Replacement("<kit>", kit.getDisplayName()));
-            if (profile.getGameData().getParty() == null) {
-                profile.setState(ProfileState.IN_LOBBY);
-            } else {
-                profile.setState(ProfileState.IN_PARTY);
+        if (profile.hasState(ProfileState.IN_KIT_EDITOR) && profile.getGameData().getKitEditor() != null) {
+            if (profile.getGameData().getKitEditor().equals(kit)) {
+                kit.giveLoadout(player.getUniqueId());
+                player.updateInventory();
             }
         }
 
         MessagesLocale.KIT_EDITOR_RESET.send(player.getUniqueId(), new Replacement("<kit>", kit.getDisplayName()));
+    }
+
+    @Command(name = "save", desc = "")
+    public void save(@Sender Player player) {
+        Profile profile = API.getProfile(player);
+        if (profile == null) return;
+        if (!profile.hasState(ProfileState.IN_KIT_EDITOR)) return;
+        if (profile.getGameData().getKitEditor() == null) return;
+
+        Kit kit = profile.getGameData().getKitEditor();
+        profile.getGameData().get(kit).setKitLoadout(Arrays.asList(player.getInventory().getContents()));
+
+        player.sendMessage(CC.color("&a✔ Layout kit saved"));
+        PlayerUtil.sendActionBar(player, CC.color("&a✔ Layout kit saved"));
+    }
+
+    @Command(name = "exit", desc = "")
+    public void exit(@Sender Player player) {
+        Profile profile = API.getProfile(player);
+        if (profile == null) return;
+        if (!profile.hasState(ProfileState.IN_KIT_EDITOR)) return;
+        if (profile.getGameData().getKitEditor() == null) return;
+
+        Kit kit = profile.getGameData().getKitEditor();
+        profile.getGameData().get(kit).setKitLoadout(Arrays.asList(player.getInventory().getContents()));
+
+        player.sendMessage(CC.color("&a✔ Layout kit saved"));
+        PlayerUtil.sendActionBar(player, CC.color("&a✔ Layout kit saved"));
+
+        profile.getGameData().setKitEditor(null);
+
+        if (profile.getGameData().getParty() == null) {
+            profile.setState(ProfileState.IN_LOBBY);
+        } else {
+            profile.setState(ProfileState.IN_PARTY);
+        }
+
+        PlayerUtil.teleportToSpawn(player.getUniqueId());
     }
 }

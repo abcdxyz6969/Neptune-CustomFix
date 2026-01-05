@@ -60,6 +60,20 @@ public class MainCommand {
         sender.sendMessage(CC.color("&aSuccessfully reloaded configs!"));
     }
 
+    @Command(name = "setkiteditorlocation", desc = "")
+    @Require("neptune.admin")
+    public void setkiteditorlocation(@Sender Player player) {
+       dev.lrxh.neptune.game.kit.KitEditorLocationService.setLocation(player.getLocation());
+       player.sendMessage(CC.color("&aSuccessfully set kit editor location!"));
+    }
+
+    @Command(name = "removekiteditorlocation", desc = "")
+    @Require("neptune.admin")
+    public void removekiteditorlocation(@Sender Player player) {
+       dev.lrxh.neptune.game.kit.KitEditorLocationService.removeLocation();
+       player.sendMessage(CC.color("&aSuccessfully removed kit editor location!"));
+    }
+
     @Command(name = "stop", desc = "")
     public void stop(@Sender Player player) {
         Neptune.get().setAllowMatches(false);

@@ -18,6 +18,7 @@ public class ConfigService {
     private ConfigFile divisionsConfig;
     private ConfigFile cosmeticsConfig;
     private ConfigFile killMessagesConfig;
+    private KitEditorLocationConfig kitEditorLocationConfig;
 
     public static ConfigService get() {
         if (instance == null) instance = new ConfigService();
@@ -36,9 +37,16 @@ public class ConfigService {
         divisionsConfig = new ConfigFile("divisions");
         cosmeticsConfig = new ConfigFile("cosmetics");
         killMessagesConfig = new ConfigFile("kill-messages");
+        kitEditorLocationConfig = new KitEditorLocationConfig();
+
 
         initialize();
     }
+
+    public KitEditorLocationConfig getKitEditorLocationConfig() {
+       return kitEditorLocationConfig;
+    }
+
 
     public void initialize() {
         HotbarLocale.LOBBY_PARTY_CREATE_NAME.load();
@@ -47,5 +55,6 @@ public class ConfigService {
         MenusLocale.FILTER_NAME.load();
         ScoreboardLocale.TITLE.load();
         CosmeticsLocale.LIGHTNING_DISPLAY_NAME.load();
+        kitEditorLocationConfig.load();
     }
 }

@@ -12,13 +12,14 @@ import dev.lrxh.neptune.profile.impl.Profile;
 import dev.lrxh.neptune.providers.clickable.Replacement;
 import dev.lrxh.neptune.utils.CC;
 import dev.lrxh.neptune.utils.PlayerUtil;
-import net.kyori.adventure.text.Component;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 
 import java.util.Arrays;
 
 public class KitEditorCommand {
+
+    private static final String SAVED_MESSAGE = "&a✔ Layout kit saved";
 
     @Command(name = "menu", desc = "")
     public void open(@Sender Player player) {
@@ -65,8 +66,8 @@ public class KitEditorCommand {
         Kit kit = profile.getGameData().getKitEditor();
         profile.getGameData().get(kit).setKitLoadout(Arrays.asList(player.getInventory().getContents()));
 
-        player.sendMessage(CC.color("&a✔ Layout kit saved"));
-        player.sendActionBar(Component.text(CC.color("&a✔ Layout kit saved")));
+        player.sendMessage(CC.color(SAVED_MESSAGE));
+        player.sendActionBar(CC.color(SAVED_MESSAGE).content());
     }
 
     @Command(name = "exit", desc = "")
@@ -79,8 +80,8 @@ public class KitEditorCommand {
         Kit kit = profile.getGameData().getKitEditor();
         profile.getGameData().get(kit).setKitLoadout(Arrays.asList(player.getInventory().getContents()));
 
-        player.sendMessage(CC.color("&a✔ Layout kit saved"));
-        player.sendActionBar(Component.text(CC.color("&a✔ Layout kit saved")));
+        player.sendMessage(CC.color(SAVED_MESSAGE));
+        player.sendActionBar(CC.color(SAVED_MESSAGE).content());
 
         profile.getGameData().setKitEditor(null);
 

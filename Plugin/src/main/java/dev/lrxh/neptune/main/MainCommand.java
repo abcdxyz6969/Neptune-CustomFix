@@ -73,6 +73,30 @@ public class MainCommand {
        dev.lrxh.neptune.game.kit.KitEditorLocationService.removeLocation();
        player.sendMessage(CC.color("&aSuccessfully removed kit editor location!"));
     }
+    
+    @Command(name = "setkiteditorsaveblock", desc = "")
+    @Require("neptune.admin")
+    public void setkiteditorsaveblock(@Sender Player player) {
+        org.bukkit.block.Block block = player.getTargetBlockExact(5);
+        if (block == null || block.getType().isAir()) {
+           player.sendMessage(CC.color("&cYou must look at a solid block."));
+           return;
+        }
+        dev.lrxh.neptune.game.kit.KitEditorLocationService.setSaveBlock(block);
+        player.sendMessage(CC.color("&aSuccessfully set kit editor SAVE block!"));
+    }
+
+    @Command(name = "setkiteditorresetblock", desc = "")
+    @Require("neptune.admin")
+    public void setkiteditorresetblock(@Sender Player player) {
+        org.bukkit.block.Block block = player.getTargetBlockExact(5);
+        if (block == null || block.getType().isAir()) {
+           player.sendMessage(CC.color("&cYou must look at a solid block."));
+           return;
+        }
+        dev.lrxh.neptune.game.kit.KitEditorLocationService.setResetBlock(block);
+        player.sendMessage(CC.color("&aSuccessfully set kit editor RESET block!"));
+    }
 
     @Command(name = "stop", desc = "")
     public void stop(@Sender Player player) {

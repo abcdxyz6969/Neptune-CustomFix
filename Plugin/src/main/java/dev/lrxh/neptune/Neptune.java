@@ -45,6 +45,7 @@ import dev.lrxh.neptune.game.kit.command.KitProvider;
 import dev.lrxh.neptune.game.kit.command.StatsCommand;
 import dev.lrxh.neptune.game.kit.procedure.KitProcedureListener;
 import dev.lrxh.neptune.game.kit.listener.CommandBlockListener;
+import dev.lrxh.neptune.game.kit.listener.KitEditorBlockListener;
 import dev.lrxh.neptune.game.match.MatchService;
 import dev.lrxh.neptune.game.match.commands.MatchHistoryCommand;
 import dev.lrxh.neptune.game.match.commands.SpectateCommand;
@@ -160,7 +161,8 @@ public final class Neptune extends JavaPlugin {
                         new ArenaProcedureListener(),
                         new KitProcedureListener(),
                         new ItemBrowserListener(),
-                        new CommandBlockListener())
+                        new CommandBlockListener(),
+                        new KitEditorBlockListener())
                 .forEach(listener -> getServer().getPluginManager().registerEvents(listener, this));
     }
 

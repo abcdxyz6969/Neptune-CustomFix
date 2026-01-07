@@ -16,11 +16,19 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class KitEditorBlockListener implements Listener {
 
     private static final String ERROR_MSG = "&cHmm, We can't handle this request, this may be error, try contact admin.";
     private static final String SAVED_MSG = "&a✔ Layout kit saved";
+
+    private static final long COOLDOWN_MS = 2000L;
+
+    private static final Map<UUID, Long> SAVE_COOLDOWN = new HashMap<>();
+    private static final Map<UUID, Long> RESET_COOLDOWN = new HashMap<>();
 
     @EventHandler
     public void onInteract(PlayerInteractEvent event) {
@@ -32,7 +40,6 @@ public class KitEditorBlockListener implements Listener {
 
         Location saveLoc = KitEditorLocationService.getSaveBlockLocation();
         Location resetLoc = KitEditorLocationService.getResetBlockLocation();
-
         if (saveLoc == null && resetLoc == null) return;
 
         boolean isSave = sameBlock(clicked.getLocation(), saveLoc);
@@ -51,17 +58,19 @@ public class KitEditorBlockListener implements Listener {
             return;
         }
 
-        Kit kit = profile.getGameData().getKitEditor();
+        UUID uuid = player.getUniqueId();
+        long now = System.currentTimeMillis();
 
         if (isSave) {
-            if (!profile.hasCooldownEnded("kiteditor_save_block")) return;
+            Long last = SAVE_COOLDOWN.get(uuid);
+            if (last != null && (now - last) < COOLDOWN_MS) return;
+            SAVE_COOLDOWN.put(uuid, now);
 
+            Kit kit = profile.getGameData().getKitEditor();
             profile.getGameData().get(kit).setKitLoadout(Arrays.asList(player.getInventory().getContents()));
 
             player.sendMessage(CC.color(SAVED_MSG));
             player.sendActionBar(CC.color(SAVED_MSG).content());
-
-            profile.addCooldown("kiteditor_save_block", 40);
 
             if (player.isSneaking()) {
                 profile.getGameData().setKitEditor(null);
@@ -78,16 +87,17 @@ public class KitEditorBlockListener implements Listener {
         }
 
         if (isReset) {
-            if (!profile.hasCooldownEnded("kiteditor_reset_block")) return;
+            Long last = RESET_COOLDOWN.get(uuid);
+            if (last != null && (now - last) < COOLDOWN_MS) return;
+            RESET_COOLDOWN.put(uuid, now);
 
+            Kit kit = profile.getGameData().getKitEditor();
             profile.getGameData().get(kit).setKitLoadout(kit.getItems());
             kit.giveLoadout(player.getUniqueId());
             player.updateInventory();
 
             player.sendMessage(CC.color("&a✔ Kit layout reset"));
             player.sendActionBar(CC.color("&a✔ Kit layout reset").content());
-
-            profile.addCooldown("kiteditor_reset_block", 40);
         }
     }
 

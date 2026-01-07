@@ -5,6 +5,7 @@ import dev.lrxh.neptune.API;
 import dev.lrxh.neptune.Neptune;
 import dev.lrxh.neptune.configs.impl.MessagesLocale;
 import dev.lrxh.neptune.feature.hotbar.HotbarService;
+import dev.lrxh.neptune.game.kit.Kit;
 import dev.lrxh.neptune.game.match.Match;
 import dev.lrxh.neptune.game.match.impl.participant.DeathCause;
 import dev.lrxh.neptune.game.match.impl.participant.Participant;
@@ -27,7 +28,14 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+
 public class ProfileListener implements Listener {
+
+    private static final Set<UUID> LEFT_IN_KIT_EDITOR = new HashSet<>();
 
     @EventHandler
     public void onPreJoin(PlayerLoginEvent event) {
@@ -59,6 +67,11 @@ public class ProfileListener implements Listener {
                         }
                         PlayerUtil.reset(player);
                         HotbarService.get().giveItems(player);
+
+                        if (LEFT_IN_KIT_EDITOR.remove(player.getUniqueId())) {
+                            player.sendMessage(CC.color("&aYour layout kit was saved &7(you leave server when in kit editor)"));
+                            player.sendActionBar(CC.color("&aYour layout kit was saved").content());
+                        }
                     }
                 }));
     }
@@ -71,6 +84,12 @@ public class ProfileListener implements Listener {
         if (profile == null)
             return;
         Match match = profile.getMatch();
+
+        if (profile.hasState(ProfileState.IN_KIT_EDITOR) && profile.getGameData().getKitEditor() != null) {
+            Kit kit = profile.getGameData().getKitEditor();
+            profile.getGameData().get(kit).setKitLoadout(Arrays.asList(player.getInventory().getContents()));
+            LEFT_IN_KIT_EDITOR.add(player.getUniqueId());
+        }
 
         if (match != null) {
             if (profile.getState() == ProfileState.IN_SPECTATOR) {

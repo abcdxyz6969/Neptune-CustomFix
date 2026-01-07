@@ -54,10 +54,14 @@ public class KitEditorBlockListener implements Listener {
         Kit kit = profile.getGameData().getKitEditor();
 
         if (isSave) {
+            if (!profile.hasCooldownEnded("kiteditor_save_block")) return;
+
             profile.getGameData().get(kit).setKitLoadout(Arrays.asList(player.getInventory().getContents()));
 
             player.sendMessage(CC.color(SAVED_MSG));
             player.sendActionBar(CC.color(SAVED_MSG).content());
+
+            profile.addCooldown("kiteditor_save_block", 40);
 
             if (player.isSneaking()) {
                 profile.getGameData().setKitEditor(null);
@@ -74,11 +78,16 @@ public class KitEditorBlockListener implements Listener {
         }
 
         if (isReset) {
+            if (!profile.hasCooldownEnded("kiteditor_reset_block")) return;
+
             profile.getGameData().get(kit).setKitLoadout(kit.getItems());
             kit.giveLoadout(player.getUniqueId());
             player.updateInventory();
+
             player.sendMessage(CC.color("&a✔ Kit layout reset"));
             player.sendActionBar(CC.color("&a✔ Kit layout reset").content());
+
+            profile.addCooldown("kiteditor_reset_block", 40);
         }
     }
 

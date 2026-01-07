@@ -21,15 +21,6 @@ public class KitEditorCommand {
 
     private static final String SAVED_MESSAGE = "&a✔ Layout kit saved";
 
-    @Command(name = "menu", desc = "")
-    public void open(@Sender Player player) {
-        Profile profile = API.getProfile(player);
-        if (profile == null) return;
-        if (profile.hasState(ProfileState.IN_LOBBY, ProfileState.IN_PARTY)) {
-            new KitEditorMenu().open(player);
-        }
-    }
-
     @Command(name = "edit", desc = "", usage = "<kit>")
     public void edit(@Sender Player player, Kit kit) {
         if (player == null) return;

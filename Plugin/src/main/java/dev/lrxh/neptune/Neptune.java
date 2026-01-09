@@ -195,6 +195,7 @@ public final class Neptune extends JavaPlugin {
         new LeaderboardTask().start(SettingsLocale.LEADERBOARD_UPDATE_TIME.getInt());
         new ArenaBoundaryCheckTask().start(20L);
         new MenuRunnable().start(20L);
+        new dev.lrxh.neptune.game.arena.tasks.ArenaForceTeleportTask().start(100L);
     }
 
     private void loadCommandManager() {

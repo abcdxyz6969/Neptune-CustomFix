@@ -97,6 +97,13 @@ public class MainCommand {
         dev.lrxh.neptune.game.kit.KitEditorLocationService.setResetBlock(block);
         player.sendMessage(CC.color("&aSuccessfully set kit editor RESET block!"));
     }
+    
+    @Command(name = "arenastats", desc = "")
+    @Require("neptune.admin")
+    public void arenastats(@Sender Player player) {
+        new dev.lrxh.neptune.game.arena.menu.ArenaStatsMenu().open(player);
+    }
+
 
     @Command(name = "stop", desc = "")
     public void stop(@Sender Player player) {

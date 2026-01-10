@@ -110,43 +110,43 @@ public class MainCommand {
     @Command(name = "playerinarena", desc = "", usage = "<arena>")
     @Require("neptune.admin")
     public void playerinarena(@Sender Player player, String arenaName) {
-        dev.lrxh.neptune.game.arena.Arena arena = dev.lrxh.neptune.game.arena.ArenaService.get().getArena(arenaName);
+        dev.lrxh.neptune.game.arena.Arena arena = dev.lrxh.neptune.game.arena.ArenaService.get().getArenaByName(arenaName);
 
         if (arena == null) {
             player.sendMessage(CC.color("&cArena not found: &f" + arenaName).content());
             return;
         }
 
-        if (arena.getPos1() == null || arena.getPos2() == null) {
-            player.sendMessage(CC.color("&cArena &f" + arena.getName() + " &chas no pos1/pos2 set.").content());
+        if (arena.getMin() == null || arena.getMax() == null) {
+            player.sendMessage(CC.color("&cArena &f" + arena.getName() + " &chas no min/max set.").content());
             return;
         }
 
-        org.bukkit.Location pos1 = arena.getPos1();
-        org.bukkit.Location pos2 = arena.getPos2();
+        org.bukkit.Location minLoc = arena.getMin();
+        org.bukkit.Location maxLoc = arena.getMax();
 
-        if (pos1.getWorld() == null || pos2.getWorld() == null) {
+        if (minLoc.getWorld() == null || maxLoc.getWorld() == null) {
             player.sendMessage(CC.color("&cArena &f" + arena.getName() + " &cworld is null.").content());
             return;
         }
 
-        if (!pos1.getWorld().getName().equalsIgnoreCase(pos2.getWorld().getName())) {
-            player.sendMessage(CC.color("&cArena &f" + arena.getName() + " &cpos1/pos2 world mismatch.").content());
+        if (!minLoc.getWorld().getName().equalsIgnoreCase(maxLoc.getWorld().getName())) {
+            player.sendMessage(CC.color("&cArena &f" + arena.getName() + " &cmin/max world mismatch.").content());
             return;
         }
 
-        int minX = Math.min(pos1.getBlockX(), pos2.getBlockX());
-        int maxX = Math.max(pos1.getBlockX(), pos2.getBlockX());
-        int minY = Math.min(pos1.getBlockY(), pos2.getBlockY());
-        int maxY = Math.max(pos1.getBlockY(), pos2.getBlockY());
-        int minZ = Math.min(pos1.getBlockZ(), pos2.getBlockZ());
-        int maxZ = Math.max(pos1.getBlockZ(), pos2.getBlockZ());
+        int minX = Math.min(minLoc.getBlockX(), maxLoc.getBlockX());
+        int maxX = Math.max(minLoc.getBlockX(), maxLoc.getBlockX());
+        int minY = Math.min(minLoc.getBlockY(), maxLoc.getBlockY());
+        int maxY = Math.max(minLoc.getBlockY(), maxLoc.getBlockY());
+        int minZ = Math.min(minLoc.getBlockZ(), maxLoc.getBlockZ());
+        int maxZ = Math.max(minLoc.getBlockZ(), maxLoc.getBlockZ());
 
         List<String> names = new ArrayList<>();
 
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (p.getWorld() == null) continue;
-            if (!p.getWorld().getName().equalsIgnoreCase(pos1.getWorld().getName())) continue;
+            if (!p.getWorld().getName().equalsIgnoreCase(minLoc.getWorld().getName())) continue;
 
             int x = p.getLocation().getBlockX();
             int y = p.getLocation().getBlockY();

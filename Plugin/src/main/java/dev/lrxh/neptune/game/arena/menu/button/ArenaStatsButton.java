@@ -32,7 +32,10 @@ public class ArenaStatsButton extends Button {
         ArenaService.get().save();
 
         player.sendMessage(CC.color("&aUpdated arena &f" + arena.getName() + " &7-> " +
-                (newState ? "&aENABLED" : "&cDISABLED")));
+                (newState ? "&aENABLED" : "&cDISABLED")).content());
+
+        // reopen menu để refresh trạng thái ngay
+        new dev.lrxh.neptune.game.arena.menu.ArenaStatsMenu().open(player);
     }
 
     @Override
@@ -46,27 +49,27 @@ public class ArenaStatsButton extends Button {
         Material mat = enabled ? Material.LIME_CONCRETE : Material.RED_CONCRETE;
 
         List<String> lore = new ArrayList<>();
-        lore.add(CC.color("&7Name: &f" + arena.getName()));
-        lore.add(CC.color("&7Display: &f" + arena.getDisplayName()));
-        lore.add(CC.color("&7Enabled: " + (enabled ? "&aTrue" : "&cFalse")));
-        lore.add(CC.color("&7Setup: " + (setup ? "&aTrue" : "&cFalse")));
-        lore.add(CC.color("&7Snapshot Ready: " + (hasSnapshot ? "&aYes" : "&cNo")));
-        lore.add(CC.color("&7Done Loading: " + (loaded ? "&aTrue" : "&cFalse")));
-        lore.add(CC.color("&7Used: " + (used ? "&eTrue" : "&aFalse")));
+        lore.add(CC.color("&7Name: &f" + arena.getName()).content());
+        lore.add(CC.color("&7Display: &f" + arena.getDisplayName()).content());
+        lore.add(CC.color("&7Enabled: " + (enabled ? "&aTrue" : "&cFalse")).content());
+        lore.add(CC.color("&7Setup: " + (setup ? "&aTrue" : "&cFalse")).content());
+        lore.add(CC.color("&7Snapshot Ready: " + (hasSnapshot ? "&aYes" : "&cNo")).content());
+        lore.add(CC.color("&7Done Loading: " + (loaded ? "&aTrue" : "&cFalse")).content());
+        lore.add(CC.color("&7Used: " + (used ? "&eTrue" : "&aFalse")).content());
 
         if (arena.getOwner() != null) {
-            lore.add(CC.color("&7Duplicate Of: &f" + arena.getOwner().getName()));
+            lore.add(CC.color("&7Duplicate Of: &f" + arena.getOwner().getName()).content());
         }
 
         if (arena.getAllocationId() != null) {
-            lore.add(CC.color("&7AllocId: &f" + arena.getAllocationId()));
+            lore.add(CC.color("&7AllocId: &f" + arena.getAllocationId()).content());
         }
 
-        lore.add(CC.color(""));
-        lore.add(CC.color("&eClick to toggle enabled status"));
+        lore.add("");
+        lore.add(CC.color("&eClick to toggle enabled status").content());
 
         return new ItemBuilder(mat)
-                .name(CC.color((enabled ? "&a" : "&c") + arena.getName()))
+                .name(CC.color((enabled ? "&a" : "&c") + arena.getName()).content())
                 .lore(lore)
                 .build();
     }

@@ -4,6 +4,8 @@ import dev.lrxh.neptune.game.arena.Arena;
 import dev.lrxh.neptune.game.arena.ArenaService;
 import dev.lrxh.neptune.game.arena.menu.button.ArenaStatsButton;
 import dev.lrxh.neptune.utils.CC;
+import dev.lrxh.neptune.utils.menu.Button;
+import dev.lrxh.neptune.utils.menu.Filter;
 import dev.lrxh.neptune.utils.menu.Menu;
 import org.bukkit.entity.Player;
 
@@ -13,33 +15,22 @@ import java.util.List;
 public class ArenaStatsMenu extends Menu {
 
     public ArenaStatsMenu() {
-        setAutoUpdate(true);
-        setUpdateAfterClick(true);
+        super(CC.color("&bArena Stats &7(All Maps)").content(), 54, Filter.NONE);
     }
 
     @Override
-    public String getTitle(Player player) {
-        return CC.color("&bArena Stats &7(All Maps)");
-    }
+    public List<Button> getButtons(Player player) {
+        List<Button> list = new ArrayList<>();
 
-    @Override
-    public int getSize() {
-        return 54;
-    }
-
-    @Override
-    public void update(Player player) {
-        this.buttons.clear();
-
-        List<Arena> arenas = new ArrayList<>(ArenaService.get().getArenas());
         int slot = 0;
-
-        for (Arena arena : arenas) {
+        for (Arena arena : ArenaService.get().getArenas()) {
             if (arena == null) continue;
             if (slot >= 54) break;
 
-            buttons.put(slot, new ArenaStatsButton(slot, arena));
+            list.add(new ArenaStatsButton(slot, arena));
             slot++;
         }
+
+        return list;
     }
 }

@@ -20,6 +20,7 @@ import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class MainCommand {
 
@@ -110,7 +111,8 @@ public class MainCommand {
     @Command(name = "playerinarena", desc = "", usage = "<arena>")
     @Require("neptune.admin")
     public void playerinarena(@Sender Player player, String arenaName) {
-        dev.lrxh.neptune.game.arena.Arena arena = dev.lrxh.neptune.game.arena.ArenaService.get().getArenaByName(arenaName);
+        dev.lrxh.neptune.game.arena.Arena arena =
+                dev.lrxh.neptune.game.arena.ArenaService.get().getArenaByName(arenaName);
 
         if (arena == null) {
             player.sendMessage(CC.color("&cArena not found: &f" + arenaName).content());
@@ -166,6 +168,92 @@ public class MainCommand {
                 player.sendMessage(CC.color("&f- " + name).content());
             }
         }
+    }
+
+    @Command(name = "reloadsnapshots", desc = "")
+    @Require("neptune.admin")
+    public void reloadsnapshots(@Sender Player player) {
+
+        List<dev.lrxh.neptune.game.arena.Arena> arenas =
+                new ArrayList<>(dev.lrxh.neptune.game.arena.ArenaService.get().getArenas());
+
+        if (arenas.isEmpty()) {
+            player.sendMessage(CC.color("&cNo arenas loaded.").content());
+            return;
+        }
+
+        player.sendMessage(CC.color("&bReloading snapshots for &f" + arenas.size() + " &baren as...").content());
+
+        AtomicInteger total = new AtomicInteger(0);
+        AtomicInteger success = new AtomicInteger(0);
+        AtomicInteger failed = new AtomicInteger(0);
+
+        for (dev.lrxh.neptune.game.arena.Arena arena : arenas) {
+            if (arena == null) continue;
+            if (arena.getMin() == null || arena.getMax() == null) continue;
+
+            total.incrementAndGet();
+
+            arena.setDoneLoading(false);
+            arena.setSnapshot(null);
+
+            Bukkit.getScheduler().runTask(Neptune.get(), () -> {
+                try {
+                    org.bukkit.Location min = arena.getMin();
+                    org.bukkit.Location max = arena.getMax();
+
+                    if (min.getWorld() == null || max.getWorld() == null) {
+                        failed.incrementAndGet();
+                        arena.setDoneLoading(false);
+                        checkFinish(player, total, success, failed);
+                        return;
+                    }
+
+                    int minChunkX = Math.min(min.getBlockX(), max.getBlockX()) >> 4;
+                    int maxChunkX = Math.max(min.getBlockX(), max.getBlockX()) >> 4;
+                    int minChunkZ = Math.min(min.getBlockZ(), max.getBlockZ()) >> 4;
+                    int maxChunkZ = Math.max(min.getBlockZ(), max.getBlockZ()) >> 4;
+
+                    for (int cx = minChunkX; cx <= maxChunkX; cx++) {
+                        for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
+                            min.getWorld().getChunkAt(cx, cz).load(true);
+                        }
+                    }
+
+                    dev.lrxh.blockChanger.snapshot.CuboidSnapshot.create(min, max).thenAccept(snapshot -> {
+                        if (snapshot == null) {
+                            failed.incrementAndGet();
+                            arena.setDoneLoading(false);
+                        } else {
+                            success.incrementAndGet();
+                            arena.setSnapshot(snapshot);
+                            arena.setDoneLoading(true);
+                        }
+
+                        checkFinish(player, total, success, failed);
+                    });
+
+                } catch (Throwable t) {
+                    failed.incrementAndGet();
+                    arena.setDoneLoading(false);
+                    checkFinish(player, total, success, failed);
+                }
+            });
+        }
+
+        if (total.get() == 0) {
+            player.sendMessage(CC.color("&cNo valid arenas with min/max set to reload.").content());
+        }
+    }
+
+    private void checkFinish(Player player, AtomicInteger total, AtomicInteger success, AtomicInteger failed) {
+        int done = success.get() + failed.get();
+        if (done < total.get()) return;
+
+        player.sendMessage(CC.color("&a✔ Snapshot reload finished!").content());
+        player.sendMessage(CC.color("&7Total: &f" + total.get()
+                + " &7| &aSuccess: &f" + success.get()
+                + " &7| &cFailed: &f" + failed.get()).content());
     }
 
     @Command(name = "stop", desc = "")

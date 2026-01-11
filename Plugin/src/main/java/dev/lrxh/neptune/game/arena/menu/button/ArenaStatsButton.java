@@ -24,7 +24,6 @@ public class ArenaStatsButton extends Button {
 
     @Override
     public void onClick(ClickType type, Player player) {
-        // Click để toggle enabled (cho dễ chỉnh status map)
         arena.setEnabled(!arena.isEnabled());
         player.sendMessage(CC.color("&aUpdated arena &f" + arena.getName() + " &ato &f" + (arena.isEnabled() ? "ENABLED" : "DISABLED")));
     }
@@ -44,18 +43,18 @@ public class ArenaStatsButton extends Button {
         else mat = Material.YELLOW_CONCRETE;
 
         List<String> lore = new ArrayList<>();
-        lore.add(CC.color("&7Name: &f" + arena.getName()));
-        lore.add(CC.color("&7Display: &f" + (arena.getDisplayName() == null ? "&cnull" : arena.getDisplayName())));
-        lore.add(CC.color("&7Setup: " + (setup ? "&aYES" : "&cNO")));
-        lore.add(CC.color("&7Enabled: " + (enabled ? "&aYES" : "&cNO")));
-        lore.add(CC.color("&7Used: " + (used ? "&cIN USE" : "&aIDLE")));
-        lore.add(CC.color("&7DoneLoading: " + (doneLoading ? "&aYES" : "&eNO")));
-        lore.add(CC.color("&7Snapshot: &f" + (snapshot == null ? "&cnull" : "&aREADY")));
-        lore.add(CC.color("&8"));
-        lore.add(CC.color("&eClick &7to toggle enabled"));
+        lore.add("&7Name: &f" + arena.getName());
+        lore.add("&7Display: &f" + (arena.getDisplayName() == null ? "&cnull" : arena.getDisplayName()));
+        lore.add("&7Setup: " + (setup ? "&aYES" : "&cNO"));
+        lore.add("&7Enabled: " + (enabled ? "&aYES" : "&cNO"));
+        lore.add("&7Used: " + (used ? "&cIN USE" : "&aIDLE"));
+        lore.add("&7DoneLoading: " + (doneLoading ? "&aYES" : "&eNO"));
+        lore.add("&7Snapshot: &f" + (snapshot == null ? "&cnull" : "&aREADY"));
+        lore.add("&8");
+        lore.add("&eClick &7to toggle enabled");
 
         return new ItemBuilder(mat)
-                .name(CC.color("&e" + arena.getName()))
+                .name("&e" + arena.getName())
                 .lore(lore)
                 .build();
     }

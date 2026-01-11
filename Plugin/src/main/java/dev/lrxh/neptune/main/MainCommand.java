@@ -3,6 +3,7 @@ package dev.lrxh.neptune.main;
 import com.jonahseguin.drink.annotation.Command;
 import com.jonahseguin.drink.annotation.Require;
 import com.jonahseguin.drink.annotation.Sender;
+import dev.lrxh.blockChanger.snapshot.CuboidSnapshot;
 import dev.lrxh.neptune.API;
 import dev.lrxh.neptune.Neptune;
 import dev.lrxh.neptune.configs.ConfigService;
@@ -10,6 +11,7 @@ import dev.lrxh.neptune.feature.cosmetics.CosmeticService;
 import dev.lrxh.neptune.feature.hotbar.HotbarService;
 import dev.lrxh.neptune.game.arena.Arena;
 import dev.lrxh.neptune.game.arena.ArenaService;
+import dev.lrxh.neptune.game.arena.menu.ArenaStatsMenu;
 import dev.lrxh.neptune.game.match.Match;
 import dev.lrxh.neptune.game.match.MatchService;
 import dev.lrxh.neptune.profile.data.ProfileState;
@@ -21,21 +23,15 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class MainCommand {
 
-    private static BukkitTask autoReloadSnapshotsTask;
-    private static int autoReloadMinutes = 0;
-
-    private static long totalReloadSnapshots = 0;
-    private static long autoReloadSnapshotsRuns = 0;
-    private static long lastReloadSnapshotsAtMillis = 0L;
-
-    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-            .withZone(ZoneId.systemDefault());
+    // ===== Auto reload snapshots state =====
+    private static BukkitTask autoReloadTask;
+    private static long autoReloadMinutes = 15;
+    private static final AtomicLong reloadCount = new AtomicLong(0);
+    private static volatile long lastReloadMillis = -1L;
 
     @Command(name = "", desc = "")
     @Require("neptune.admin")
@@ -77,6 +73,8 @@ public class MainCommand {
         sender.sendMessage(CC.color("&aSuccessfully reloaded configs!"));
     }
 
+    // ====== Kit editor location + blocks (đã có sẵn trong file bạn gửi) ======
+
     @Command(name = "setkiteditorlocation", desc = "")
     @Require("neptune.admin")
     public void setkiteditorlocation(@Sender Player player) {
@@ -115,123 +113,132 @@ public class MainCommand {
         player.sendMessage(CC.color("&aSuccessfully set kit editor RESET block!"));
     }
 
-    // =========================
-    // SNAPSHOTS
-    // =========================
+    // ====== Arena stats menu ======
 
-    @Command(name = "reloadsnapshots", desc = "Reload all arena snapshots")
+    @Command(name = "arenastats", desc = "")
     @Require("neptune.admin")
-    public void reloadsnapshots(@Sender CommandSender sender) {
-        ReloadResult result = reloadAllSnapshots(false);
-        sender.sendMessage(CC.color("&aReload snapshots done &7(reloaded: &f" + result.reloaded
-                + "&7, skipped(no region): &f" + result.skippedNoRegion
-                + "&7, skipped(loading): &f" + result.skippedLoading + "&7)"));
+    public void arenastats(@Sender Player player) {
+        new ArenaStatsMenu().open(player);
     }
 
-    @Command(name = "startautoreloadsnapshots", desc = "Start auto reload snapshots task", usage = "[minutes]")
+    // ====== Snapshots reload ======
+
+    @Command(name = "reloadsnapshots", desc = "")
+    @Require("neptune.admin")
+    public void reloadsnapshots(@Sender CommandSender sender) {
+        int total = 0;
+
+        for (Arena arena : ArenaService.get().arenas) {
+            if (arena == null) continue;
+            if (arena.getMin() == null || arena.getMax() == null) continue;
+
+            forceReloadSnapshot(arena);
+            total++;
+        }
+
+        sender.sendMessage(CC.color("&aReload snapshots started for &f" + total + " &aarenas."));
+    }
+
+    @Command(name = "reloadsnapshotsarena", desc = "")
+    @Require("neptune.admin")
+    public void reloadsnapshotsarena(@Sender CommandSender sender, String arenaName) {
+        Arena arena = ArenaService.get().getArenaByName(arenaName);
+        if (arena == null) {
+            sender.sendMessage(CC.color("&cArena not found: &f" + arenaName));
+            return;
+        }
+        if (arena.getMin() == null || arena.getMax() == null) {
+            sender.sendMessage(CC.color("&cArena &f" + arena.getName() + " &cis not setup (min/max missing)."));
+            return;
+        }
+
+        forceReloadSnapshot(arena);
+        sender.sendMessage(CC.color("&aReload snapshot started for &f" + arena.getName() + "&a."));
+    }
+
+    private static void forceReloadSnapshot(Arena arena) {
+        // mark not ready
+        arena.setDoneLoading(false);
+        arena.setSnapshot(null);
+
+        // create new snapshot async
+        CuboidSnapshot.create(arena.getMin(), arena.getMax()).thenAccept(snapshot -> {
+            arena.setSnapshot(snapshot);
+            arena.setDoneLoading(true);
+
+            reloadCount.incrementAndGet();
+            lastReloadMillis = System.currentTimeMillis();
+        }).exceptionally(ex -> {
+            arena.setDoneLoading(false);
+            return null;
+        });
+    }
+
+    // ====== Auto reload snapshots ======
+
+    @Command(name = "startautoreloadsnapshots", desc = "")
     @Require("neptune.admin")
     public void startautoreloadsnapshots(@Sender CommandSender sender, Integer minutes) {
-        if (autoReloadSnapshotsTask != null) {
+        if (autoReloadTask != null) {
             sender.sendMessage(CC.color("&cThere currently a task for Auto Reload Snapshots, try stop and start again."));
             return;
         }
 
-        int m = (minutes == null ? 15 : minutes);
-        if (m <= 0) m = 15;
+        long mins = (minutes == null ? 15 : minutes);
+        if (mins <= 0) mins = 15;
 
-        autoReloadMinutes = m;
+        autoReloadMinutes = mins;
 
-        long periodTicks = (long) m * 60L * 20L;
+        long periodTicks = autoReloadMinutes * 60L * 20L;
 
-        autoReloadSnapshotsTask = Bukkit.getScheduler().runTaskTimer(
+        autoReloadTask = Bukkit.getScheduler().runTaskTimerAsynchronously(
                 Neptune.get(),
                 () -> {
-                    ReloadResult result = reloadAllSnapshots(true);
-                    autoReloadSnapshotsRuns++;
+                    for (Arena arena : ArenaService.get().arenas) {
+                        if (arena == null) continue;
+                        if (arena.getMin() == null || arena.getMax() == null) continue;
+                        forceReloadSnapshot(arena);
+                    }
                 },
                 periodTicks,
                 periodTicks
         );
 
-        sender.sendMessage(CC.color("&aStarted Auto Reload Snapshots &7(every &f" + autoReloadMinutes + " &7minutes)"));
+        sender.sendMessage(CC.color("&aStarted Auto Reload Snapshots every &f" + autoReloadMinutes + " &aminutes."));
     }
 
-    @Command(name = "stopautoreloadsnapshots", desc = "Stop auto reload snapshots task")
+    @Command(name = "stopautoreloadsnapshots", desc = "")
     @Require("neptune.admin")
     public void stopautoreloadsnapshots(@Sender CommandSender sender) {
-        if (autoReloadSnapshotsTask == null) {
-            sender.sendMessage(CC.color("&cThere is no Auto Reload Snapshots task running."));
+        if (autoReloadTask != null) {
+            autoReloadTask.cancel();
+            autoReloadTask = null;
+            sender.sendMessage(CC.color("&aStopped Auto Reload Snapshots."));
             return;
         }
 
-        autoReloadSnapshotsTask.cancel();
-        autoReloadSnapshotsTask = null;
-        autoReloadMinutes = 0;
-
-        sender.sendMessage(CC.color("&aStopped Auto Reload Snapshots."));
+        sender.sendMessage(CC.color("&cThere is no Auto Reload Snapshots task running."));
     }
 
-    @Command(name = "autoreloadsnapshotsstatus", desc = "Show auto reload snapshots status")
+    @Command(name = "autoreloadsnapshotsstatus", desc = "")
     @Require("neptune.admin")
     public void autoreloadsnapshotsstatus(@Sender CommandSender sender) {
-        boolean running = autoReloadSnapshotsTask != null;
+        boolean running = autoReloadTask != null;
 
-        sender.sendMessage(CC.color("&eAuto Reload Snapshots: " + (running ? "&aRUNNING" : "&cSTOPPED")));
-        if (running) {
-            sender.sendMessage(CC.color("&eInterval: &f" + autoReloadMinutes + " &eminutes"));
-        }
-        sender.sendMessage(CC.color("&eTotal reload snapshots: &f" + totalReloadSnapshots));
-        sender.sendMessage(CC.color("&eAuto reload runs: &f" + autoReloadSnapshotsRuns));
+        sender.sendMessage(CC.color("&eAuto Reload Snapshots Status"));
+        sender.sendMessage(CC.color("&7Running: " + (running ? "&aYES" : "&cNO")));
+        sender.sendMessage(CC.color("&7Interval: &f" + autoReloadMinutes + " minutes"));
+        sender.sendMessage(CC.color("&7Total reloads done: &f" + reloadCount.get()));
 
-        if (lastReloadSnapshotsAtMillis > 0L) {
-            sender.sendMessage(CC.color("&eLast reload at: &f" + TIME_FMT.format(Instant.ofEpochMilli(lastReloadSnapshotsAtMillis))));
+        if (lastReloadMillis > 0) {
+            long secAgo = (System.currentTimeMillis() - lastReloadMillis) / 1000L;
+            sender.sendMessage(CC.color("&7Last reload: &f" + secAgo + "s ago"));
         } else {
-            sender.sendMessage(CC.color("&eLast reload at: &fNever"));
+            sender.sendMessage(CC.color("&7Last reload: &cNever"));
         }
     }
 
-    private ReloadResult reloadAllSnapshots(boolean silent) {
-        int reloaded = 0;
-        int skippedNoRegion = 0;
-        int skippedLoading = 0;
-
-        for (Arena arena : ArenaService.get().arenas) {
-            if (arena == null) continue;
-
-            if (arena.getMin() == null || arena.getMax() == null) {
-                skippedNoRegion++;
-                continue;
-            }
-
-            // đang loading snapshot thì bỏ qua để tránh spam task
-            if (!arena.isDoneLoading()) {
-                skippedLoading++;
-                continue;
-            }
-
-            // Trick: gọi lại setMin/setMax để trigger tạo snapshot mới theo code Arena.setMin/setMax
-            arena.setMin(arena.getMin());
-            arena.setMax(arena.getMax());
-            reloaded++;
-        }
-
-        totalReloadSnapshots++;
-        lastReloadSnapshotsAtMillis = System.currentTimeMillis();
-
-        return new ReloadResult(reloaded, skippedNoRegion, skippedLoading);
-    }
-
-    private static class ReloadResult {
-        private final int reloaded;
-        private final int skippedNoRegion;
-        private final int skippedLoading;
-
-        private ReloadResult(int reloaded, int skippedNoRegion, int skippedLoading) {
-            this.reloaded = reloaded;
-            this.skippedNoRegion = skippedNoRegion;
-            this.skippedLoading = skippedLoading;
-        }
-    }
+    // ====== stop server ======
 
     @Command(name = "stop", desc = "")
     public void stop(@Sender Player player) {

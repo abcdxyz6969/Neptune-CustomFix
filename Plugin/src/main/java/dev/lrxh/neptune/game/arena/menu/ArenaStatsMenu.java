@@ -1,61 +1,39 @@
-package dev.lrxh.neptune.game.arena.menu.button;
+package dev.lrxh.neptune.game.arena.menu;
 
-import dev.lrxh.blockChanger.snapshot.CuboidSnapshot;
 import dev.lrxh.neptune.game.arena.Arena;
-import dev.lrxh.neptune.utils.CC;
-import dev.lrxh.neptune.utils.ItemBuilder;
+import dev.lrxh.neptune.game.arena.ArenaService;
+import dev.lrxh.neptune.game.arena.menu.button.ArenaStatsButton;
 import dev.lrxh.neptune.utils.menu.Button;
-import org.bukkit.Material;
+import dev.lrxh.neptune.utils.menu.Filter;
+import dev.lrxh.neptune.utils.menu.Menu;
 import org.bukkit.entity.Player;
-import org.bukkit.event.inventory.ClickType;
-import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
-public class ArenaStatsButton extends Button {
+public class ArenaStatsMenu extends Menu {
 
-    private final Arena arena;
-
-    public ArenaStatsButton(int slot, Arena arena) {
-        super(slot, false);
-        this.arena = arena;
+    public ArenaStatsMenu() {
+        super("&eArena Stats", 54, Filter.NONE);
     }
 
     @Override
-    public void onClick(ClickType type, Player player) {
-        arena.setEnabled(!arena.isEnabled());
-        player.sendMessage(CC.color("&aUpdated arena &f" + arena.getName() + " &ato &f" + (arena.isEnabled() ? "ENABLED" : "DISABLED")));
-    }
+    public List<Button> getButtons(Player player) {
+        List<Button> buttons = new ArrayList<>();
 
-    @Override
-    public ItemStack getItemStack(Player player) {
-        boolean setup = arena.isSetup();
-        boolean enabled = arena.isEnabled();
-        boolean used = arena.isUsed();
-        boolean doneLoading = arena.isDoneLoading();
-        CuboidSnapshot snapshot = arena.getSnapshot();
+        List<Arena> arenas = new ArrayList<>(ArenaService.get().arenas);
+        arenas.removeIf(a -> a == null || a.getName() == null);
 
-        Material mat;
-        if (!setup) mat = Material.BARRIER;
-        else if (!enabled) mat = Material.RED_CONCRETE;
-        else if (used) mat = Material.LIME_CONCRETE;
-        else mat = Material.YELLOW_CONCRETE;
+        arenas.sort(Comparator.comparing(a -> a.getName().toLowerCase()));
 
-        List<String> lore = new ArrayList<>();
-        lore.add("&7Name: &f" + arena.getName());
-        lore.add("&7Display: &f" + (arena.getDisplayName() == null ? "&cnull" : arena.getDisplayName()));
-        lore.add("&7Setup: " + (setup ? "&aYES" : "&cNO"));
-        lore.add("&7Enabled: " + (enabled ? "&aYES" : "&cNO"));
-        lore.add("&7Used: " + (used ? "&cIN USE" : "&aIDLE"));
-        lore.add("&7DoneLoading: " + (doneLoading ? "&aYES" : "&eNO"));
-        lore.add("&7Snapshot: &f" + (snapshot == null ? "&cnull" : "&aREADY"));
-        lore.add("&8");
-        lore.add("&eClick &7to toggle enabled");
+        int slot = 0;
+        for (Arena arena : arenas) {
+            if (slot >= 54) break;
+            buttons.add(new ArenaStatsButton(slot, arena));
+            slot++;
+        }
 
-        return new ItemBuilder(mat)
-                .name("&e" + arena.getName())
-                .lore(lore)
-                .build();
+        return buttons;
     }
 }

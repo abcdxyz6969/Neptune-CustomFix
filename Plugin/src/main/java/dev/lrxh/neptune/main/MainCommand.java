@@ -26,6 +26,12 @@ public class MainCommand {
     private static final AtomicInteger reloadCount = new AtomicInteger(0);
     private static volatile long lastReloadMillis = 0L;
 
+    @Command(name = "", desc = "")
+    @Require("neptune.admin")
+    public void help(@Sender Player player) {
+        new MainMenu().open(player);
+    }
+
     @Command(name = "setkiteditorlocation", desc = "")
     @Require("neptune.admin")
     public void setkiteditorlocation(@Sender Player player) {

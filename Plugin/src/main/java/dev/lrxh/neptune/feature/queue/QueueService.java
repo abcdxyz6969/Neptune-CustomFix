@@ -1,18 +1,16 @@
-package dev.lrxh.neptune.game.queue;
+package dev.lrxh.neptune.feature.queue;
 
 import dev.lrxh.neptune.API;
 import dev.lrxh.neptune.Neptune;
 import dev.lrxh.neptune.configs.impl.MessagesLocale;
-import dev.lrxh.neptune.configs.impl.SettingsLocale;
+import dev.lrxh.neptune.feature.queue.event.QueueJoinEvent;
+import dev.lrxh.neptune.feature.queue.event.QueueLeaveEvent;
 import dev.lrxh.neptune.game.kit.Kit;
 import dev.lrxh.neptune.game.kit.data.KitRule;
-import dev.lrxh.neptune.game.queue.event.QueueJoinEvent;
-import dev.lrxh.neptune.game.queue.event.QueueLeaveEvent;
 import dev.lrxh.neptune.profile.data.ProfileState;
 import dev.lrxh.neptune.profile.impl.Profile;
 import dev.lrxh.neptune.profile.impl.SettingData;
 import dev.lrxh.neptune.providers.manager.IService;
-import dev.lrxh.neptune.utils.PlayerUtil;
 import dev.lrxh.neptune.utils.Replacement;
 import lombok.Getter;
 import org.bukkit.Bukkit;

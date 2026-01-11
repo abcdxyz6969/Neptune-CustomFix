@@ -1,15 +1,14 @@
-package dev.lrxh.neptune.game.queue.task;
+package dev.lrxh.neptune.feature.queue.tasks;
 
 import dev.lrxh.neptune.API;
 import dev.lrxh.neptune.Neptune;
 import dev.lrxh.neptune.configs.impl.MessagesLocale;
-import dev.lrxh.neptune.game.arena.Arena;
+import dev.lrxh.neptune.feature.queue.QueueEntry;
+import dev.lrxh.neptune.feature.queue.QueueService;
 import dev.lrxh.neptune.game.kit.Kit;
 import dev.lrxh.neptune.game.kit.data.KitRule;
 import dev.lrxh.neptune.game.match.MatchService;
 import dev.lrxh.neptune.game.match.impl.participant.Participant;
-import dev.lrxh.neptune.game.queue.QueueEntry;
-import dev.lrxh.neptune.game.queue.QueueService;
 import dev.lrxh.neptune.profile.data.ProfileState;
 import dev.lrxh.neptune.profile.impl.Profile;
 import dev.lrxh.neptune.profile.impl.SettingData;

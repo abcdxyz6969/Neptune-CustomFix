@@ -9,7 +9,7 @@ import dev.lrxh.neptune.game.arena.Arena;
 import dev.lrxh.neptune.game.arena.ArenaService;
 import dev.lrxh.neptune.game.arena.menu.ArenaStatsMenu;
 import dev.lrxh.neptune.game.match.MatchService;
-import dev.lrxh.neptune.game.match.impl.Match;
+import dev.lrxh.neptune.game.match.Match;
 import dev.lrxh.neptune.utils.CC;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;

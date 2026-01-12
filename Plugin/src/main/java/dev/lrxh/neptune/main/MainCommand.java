@@ -98,7 +98,7 @@ public class MainCommand {
         for (Arena arena : ArenaService.get().arenas) {
             if (arena == null) continue;
 
-            // IGNORE disabled arenas
+            // IGNORE disabled arenass
             if (!arena.isEnabled()) continue;
 
             if (arena.getMin() == null || arena.getMax() == null) continue;

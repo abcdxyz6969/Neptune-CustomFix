@@ -210,6 +210,19 @@ public class MainCommand {
         }
     }
 
+    @Command(name = "forcearenaidle", desc = "Force an arena to idle (used=false)", usage = "<arenaName>")
+    @Require("neptune.admin")
+    public void forcearenaidle(@Sender org.bukkit.command.CommandSender sender, String arenaName) {
+       dev.lrxh.neptune.game.arena.Arena arena = dev.lrxh.neptune.game.arena.ArenaService.get().getArenaByName(arenaName);
+       if (arena == null) {
+          sender.sendMessage(dev.lrxh.neptune.utils.CC.color("&cArena not found: &f" + arenaName));
+          return;
+       }
+
+       arena.setUsed(false);
+       sender.sendMessage(dev.lrxh.neptune.utils.CC.color("&aForced arena &f" + arena.getName() + " &ato &fIDLE&a."));
+    }
+
     // ====== stop server ======
 
     @Command(name = "stop", desc = "")

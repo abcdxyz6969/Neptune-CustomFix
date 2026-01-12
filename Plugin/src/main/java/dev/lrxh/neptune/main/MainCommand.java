@@ -12,6 +12,8 @@ import dev.lrxh.neptune.game.match.MatchService;
 import dev.lrxh.neptune.game.match.Match;
 import dev.lrxh.neptune.utils.CC;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
@@ -25,6 +27,14 @@ public class MainCommand {
 
     private static final AtomicInteger reloadCount = new AtomicInteger(0);
     private static volatile long lastReloadMillis = 0L;
+
+    // ====== Auto force arena idle ======
+    private static BukkitTask autoForceIdleTask = null;
+    private static long autoForceIdleMinutes = 15;
+
+    private static final AtomicInteger autoForceIdleRuns = new AtomicInteger(0);
+    private static final AtomicInteger autoForceIdleForcedTotal = new AtomicInteger(0);
+    private static volatile long lastAutoForceIdleMillis = 0L;
 
     @Command(name = "", desc = "")
     @Require("neptune.admin")
@@ -109,7 +119,6 @@ public class MainCommand {
             return;
         }
 
-        // If disabled -> ignore
         if (!arena.isEnabled()) {
             sender.sendMessage(CC.color("&eArena &f" + arena.getName() + " &eis &cdisabled &e-> ignored."));
             return;
@@ -125,11 +134,9 @@ public class MainCommand {
     }
 
     private static void forceReloadSnapshot(Arena arena) {
-        // mark not ready
         arena.setDoneLoading(false);
         arena.setSnapshot(null);
 
-        // create new snapshot async
         CuboidSnapshot.create(arena.getMin(), arena.getMax()).thenAccept(snapshot -> {
             arena.setSnapshot(snapshot);
             arena.setDoneLoading(true);
@@ -156,7 +163,6 @@ public class MainCommand {
         if (mins <= 0) mins = 15;
 
         autoReloadMinutes = mins;
-
         long periodTicks = autoReloadMinutes * 60L * 20L;
 
         autoReloadTask = Bukkit.getScheduler().runTaskTimerAsynchronously(
@@ -164,10 +170,7 @@ public class MainCommand {
                 () -> {
                     for (Arena arena : ArenaService.get().arenas) {
                         if (arena == null) continue;
-
-                        // IGNORE disabled arenas
                         if (!arena.isEnabled()) continue;
-
                         if (arena.getMin() == null || arena.getMax() == null) continue;
                         forceReloadSnapshot(arena);
                     }
@@ -210,17 +213,140 @@ public class MainCommand {
         }
     }
 
+    // ====== Force idle manual ======
+
     @Command(name = "forcearenaidle", desc = "Force an arena to idle (used=false)", usage = "<arenaName>")
     @Require("neptune.admin")
-    public void forcearenaidle(@Sender org.bukkit.command.CommandSender sender, String arenaName) {
-       dev.lrxh.neptune.game.arena.Arena arena = dev.lrxh.neptune.game.arena.ArenaService.get().getArenaByName(arenaName);
-       if (arena == null) {
-          sender.sendMessage(dev.lrxh.neptune.utils.CC.color("&cArena not found: &f" + arenaName));
-          return;
-       }
+    public void forcearenaidle(@Sender CommandSender sender, String arenaName) {
+        Arena arena = ArenaService.get().getArenaByName(arenaName);
+        if (arena == null) {
+            sender.sendMessage(CC.color("&cArena not found: &f" + arenaName));
+            return;
+        }
 
-       arena.setUsed(false);
-       sender.sendMessage(dev.lrxh.neptune.utils.CC.color("&aForced arena &f" + arena.getName() + " &ato &fIDLE&a."));
+        arena.setUsed(false);
+        sender.sendMessage(CC.color("&aForced arena &f" + arena.getName() + " &ato &fIDLE&a."));
+    }
+
+    // ====== Auto force arena idle ======
+
+    @Command(name = "autoforcearenaidlestart", desc = "", usage = "[minutes]")
+    @Require("neptune.admin")
+    public void autoforcearenaidlestart(@Sender CommandSender sender, Integer minutes) {
+        if (autoForceIdleTask != null) {
+            sender.sendMessage(CC.color("&cThere currently a task for Auto Force Arena Idle, try stop and start again."));
+            return;
+        }
+
+        long mins = (minutes == null ? 15 : minutes);
+        if (mins <= 0) mins = 15;
+
+        autoForceIdleMinutes = mins;
+        long periodTicks = autoForceIdleMinutes * 60L * 20L;
+
+        autoForceIdleTask = Bukkit.getScheduler().runTaskTimer(
+                Neptune.get(),
+                () -> {
+                    int forcedThisRun = 0;
+
+                    for (Arena arena : ArenaService.get().arenas) {
+                        if (arena == null) continue;
+
+                        // giống style snapshot: ignore disabled
+                        if (!arena.isEnabled()) continue;
+
+                        Location min = arena.getMin();
+                        Location max = arena.getMax();
+                        if (min == null || max == null) continue;
+
+                        // chỉ xử lý khi đang in use
+                        if (!arena.isUsed()) continue;
+
+                        // có player trong vùng -> giữ nguyên
+                        if (hasPlayerInside(min, max)) continue;
+
+                        // không có ai nhưng đang in use -> force idle
+                        arena.setUsed(false);
+                        forcedThisRun++;
+                    }
+
+                    autoForceIdleRuns.incrementAndGet();
+                    autoForceIdleForcedTotal.addAndGet(forcedThisRun);
+                    lastAutoForceIdleMillis = System.currentTimeMillis();
+                },
+                periodTicks,
+                periodTicks
+        );
+
+        sender.sendMessage(CC.color("&aStarted Auto Force Arena Idle every &f" + autoForceIdleMinutes + " &aminutes."));
+    }
+
+    @Command(name = "autoforcearenaidlestop", desc = "")
+    @Require("neptune.admin")
+    public void autoforcearenaidlestop(@Sender CommandSender sender) {
+        if (autoForceIdleTask == null) {
+            sender.sendMessage(CC.color("&cThere is no Auto Force Arena Idle task running."));
+            return;
+        }
+
+        autoForceIdleTask.cancel();
+        autoForceIdleTask = null;
+        sender.sendMessage(CC.color("&aStopped Auto Force Arena Idle."));
+    }
+
+    @Command(name = "autoforcearenaidlestatus", desc = "")
+    @Require("neptune.admin")
+    public void autoforcearenaidlestatus(@Sender CommandSender sender) {
+        boolean running = autoForceIdleTask != null;
+
+        sender.sendMessage(CC.color("&eAuto Force Arena Idle Status"));
+        sender.sendMessage(CC.color("&7Running: " + (running ? "&aYES" : "&cNO")));
+        sender.sendMessage(CC.color("&7Interval: &f" + autoForceIdleMinutes + " minutes"));
+        sender.sendMessage(CC.color("&7Runs: &f" + autoForceIdleRuns.get()));
+        sender.sendMessage(CC.color("&7Total forced idle: &f" + autoForceIdleForcedTotal.get()));
+
+        if (lastAutoForceIdleMillis > 0) {
+            long secAgo = (System.currentTimeMillis() - lastAutoForceIdleMillis) / 1000L;
+            sender.sendMessage(CC.color("&7Last run: &f" + secAgo + "s ago"));
+        } else {
+            sender.sendMessage(CC.color("&7Last run: &cNever"));
+        }
+    }
+
+    private static boolean hasPlayerInside(Location min, Location max) {
+        if (min == null || max == null) return false;
+
+        World w1 = min.getWorld();
+        World w2 = max.getWorld();
+        if (w1 == null || w2 == null) return false;
+        if (!w1.getUID().equals(w2.getUID())) return false;
+
+        double minX = Math.min(min.getX(), max.getX());
+        double minY = Math.min(min.getY(), max.getY());
+        double minZ = Math.min(min.getZ(), max.getZ());
+
+        double maxX = Math.max(min.getX(), max.getX());
+        double maxY = Math.max(min.getY(), max.getY());
+        double maxZ = Math.max(min.getZ(), max.getZ());
+
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (p == null) continue;
+            if (p.getWorld() == null) continue;
+            if (!p.getWorld().getUID().equals(w1.getUID())) continue;
+
+            Location l = p.getLocation();
+            double x = l.getX();
+            double y = l.getY();
+            double z = l.getZ();
+
+            if (x >= minX && x <= maxX
+                    && y >= minY && y <= maxY
+                    && z >= minZ && z <= maxZ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // ====== stop server ======

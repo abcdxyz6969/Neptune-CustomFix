@@ -8,8 +8,8 @@ import dev.lrxh.neptune.Neptune;
 import dev.lrxh.neptune.game.arena.Arena;
 import dev.lrxh.neptune.game.arena.ArenaService;
 import dev.lrxh.neptune.game.arena.menu.ArenaStatsMenu;
-import dev.lrxh.neptune.game.match.MatchService;
 import dev.lrxh.neptune.game.match.Match;
+import dev.lrxh.neptune.game.match.MatchService;
 import dev.lrxh.neptune.utils.CC;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -28,7 +28,7 @@ public class MainCommand {
     private static final AtomicInteger reloadCount = new AtomicInteger(0);
     private static volatile long lastReloadMillis = 0L;
 
-    // ====== Auto force arena idle ======
+    // ====== Auto force arena idle (SAFE) ======
     private static BukkitTask autoForceIdleTask = null;
     private static long autoForceIdleMinutes = 15;
 
@@ -80,7 +80,7 @@ public class MainCommand {
         player.sendMessage(CC.color("&aSuccessfully set kit editor RESET block!"));
     }
 
-    // ====== Arena stats menu ======
+    // ====== Arena stats ======
 
     @Command(name = "arenastats", desc = "")
     @Require("neptune.admin")
@@ -98,7 +98,7 @@ public class MainCommand {
         for (Arena arena : ArenaService.get().arenas) {
             if (arena == null) continue;
 
-            // IGNORE disabled arenass
+            // ignore disabled
             if (!arena.isEnabled()) continue;
 
             if (arena.getMin() == null || arena.getMax() == null) continue;
@@ -213,7 +213,7 @@ public class MainCommand {
         }
     }
 
-    // ====== Force idle manual ======
+    // ====== Manual force idle (SAFE) ======
 
     @Command(name = "forcearenaidle", desc = "Force an arena to idle (used=false)", usage = "<arenaName>")
     @Require("neptune.admin")
@@ -224,11 +224,28 @@ public class MainCommand {
             return;
         }
 
+        if (!arena.isUsed()) {
+            sender.sendMessage(CC.color("&eArena &f" + arena.getName() + " &eis already &fIDLE&e."));
+            return;
+        }
+
+        if (isArenaInAnyMatch(arena)) {
+            sender.sendMessage(CC.color("&cArena &f" + arena.getName() + " &cis currently used by a match. Not forcing."));
+            return;
+        }
+
+        Location min = arena.getMin();
+        Location max = arena.getMax();
+        if (min != null && max != null && hasPlayerInside(min, max)) {
+            sender.sendMessage(CC.color("&cThere are players inside this arena region. Not forcing."));
+            return;
+        }
+
         arena.setUsed(false);
         sender.sendMessage(CC.color("&aForced arena &f" + arena.getName() + " &ato &fIDLE&a."));
     }
 
-    // ====== Auto force arena idle ======
+    // ====== Auto force arena idle (SAFE) ======
 
     @Command(name = "autoforcearenaidlestart", desc = "", usage = "[minutes]")
     @Require("neptune.admin")
@@ -251,21 +268,21 @@ public class MainCommand {
 
                     for (Arena arena : ArenaService.get().arenas) {
                         if (arena == null) continue;
-
-                        // giống style snapshot: ignore disabled
                         if (!arena.isEnabled()) continue;
 
                         Location min = arena.getMin();
                         Location max = arena.getMax();
                         if (min == null || max == null) continue;
 
-                        // chỉ xử lý khi đang in use
                         if (!arena.isUsed()) continue;
 
-                        // có player trong vùng -> giữ nguyên
+                        // SAFE: còn match đang dùng arena -> không force
+                        if (isArenaInAnyMatch(arena)) continue;
+
+                        // SAFE: có player trong vùng -> không force
                         if (hasPlayerInside(min, max)) continue;
 
-                        // không có ai nhưng đang in use -> force idle
+                        // SAFE: không match + không player -> force idle
                         arena.setUsed(false);
                         forcedThisRun++;
                     }
@@ -311,6 +328,25 @@ public class MainCommand {
         } else {
             sender.sendMessage(CC.color("&7Last run: &cNever"));
         }
+    }
+
+    private static boolean isArenaInAnyMatch(Arena arena) {
+        if (arena == null) return false;
+
+        for (Match match : MatchService.get().matches) {
+            if (match == null) continue;
+
+            Arena matchArena = match.getArena();
+            if (matchArena == null) continue;
+
+            if (matchArena == arena) return true;
+
+            String a = arena.getName();
+            String b = matchArena.getName();
+            if (a != null && b != null && a.equalsIgnoreCase(b)) return true;
+        }
+
+        return false;
     }
 
     private static boolean hasPlayerInside(Location min, Location max) {

@@ -1,14 +1,14 @@
 package dev.lrxh.neptune.main;
 
-import dev.lrxh.neptune.utils.CC;
-import dev.lrxh.neptune.utils.ItemBuilder;
 import dev.lrxh.neptune.utils.menu.Button;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.Arrays;
+import java.util.List;
 
 public class ReloadNeptuneButton extends Button {
 
@@ -17,14 +17,18 @@ public class ReloadNeptuneButton extends Button {
     }
 
     @Override
-    public ItemStack getItem(Player player) {
-        return new ItemBuilder(Material.NETHER_STAR)
-                .setName(CC.color("&aReload Neptune"))
-                .setLore(Arrays.asList(
-                        CC.color("&7Reload config & services"),
-                        CC.color("&7Click to run: &f/neptune reload")
-                ))
-                .build();
+    public ItemStack getItemStack(Player player) {
+        ItemStack item = new ItemStack(Material.NETHER_STAR);
+        ItemMeta meta = item.getItemMeta();
+
+        meta.displayName(Component.text("Reload Neptune"));
+        meta.lore(List.of(
+                Component.text("Reload config & services"),
+                Component.text("Click to run: /neptune reload")
+        ));
+
+        item.setItemMeta(meta);
+        return item;
     }
 
     @Override

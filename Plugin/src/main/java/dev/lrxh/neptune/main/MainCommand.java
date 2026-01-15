@@ -9,6 +9,12 @@ import dev.lrxh.neptune.game.arena.Arena;
 import dev.lrxh.neptune.game.arena.ArenaService;
 import dev.lrxh.neptune.game.arena.menu.ArenaStatsMenu;
 import dev.lrxh.neptune.game.match.Match;
+import dev.lrxh.neptune.API;
+import dev.lrxh.neptune.configs.ConfigService;
+import dev.lrxh.neptune.feature.cosmetics.CosmeticService;
+import dev.lrxh.neptune.feature.hotbar.HotbarService;
+import dev.lrxh.neptune.profile.data.ProfileState;
+import dev.lrxh.neptune.profile.impl.Profile;
 import dev.lrxh.neptune.game.match.MatchService;
 import dev.lrxh.neptune.utils.CC;
 import org.bukkit.Bukkit;
@@ -385,28 +391,24 @@ public class MainCommand {
         return false;
     }
 
-    @Command(name = "reload", desc = "")
-    @Require("neptune.admin")
-    public void reload(@Sender CommandSender sender) {
-        ConfigService.get().load();
-        CosmeticService.get().load();
-        HotbarService.get().load();
+   @Command(name = "reload", desc = "")
+   @Require("neptune.admin")
+   public void reload(@Sender CommandSender sender) {
+       ConfigService.get().load();
+       CosmeticService.get().load();
+       HotbarService.get().load();
 
-        for (Player p : Bukkit.getOnlinePlayers()) {
+       for (Player p : Bukkit.getOnlinePlayers()) {
            Profile profile = API.getProfile(p);
-
            if (profile.getState().equals(ProfileState.IN_GAME)
-                || profile.getState().equals(ProfileState.IN_KIT_EDITOR)) {
-             continue;
+                  || profile.getState().equals(ProfileState.IN_KIT_EDITOR)) {
+              continue;
            }
+           HotbarService.get().giveItems(p);
+       }
 
-          HotbarService.get().giveItems(p);
-      }
-
-      sender.sendMessage(CC.color("&aSuccessfully reloaded configs!"));
+    sender.sendMessage(CC.color("&aSuccessfully reloaded configs!"));
     }
-
-
 
     // ====== stop server ======
 

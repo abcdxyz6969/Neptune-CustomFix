@@ -15,13 +15,16 @@ import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class ScoreboardAdapter implements FastAdapter {
 
+    @Override
     public String getTitle(Player player) {
         return PlaceholderUtil.format(getAnimatedText(), player);
     }
 
+    @Override
     public List<String> getLines(Player player) {
         Profile profile = API.getProfile(player);
         if (profile == null) return new ArrayList<>();
@@ -42,13 +45,25 @@ public class ScoreboardAdapter implements FastAdapter {
             case IN_QUEUE:
                 return PlaceholderUtil.format(new ArrayList<>(ScoreboardLocale.IN_QUEUE.getStringList()), player);
 
-            case IN_GAME:
+            case IN_GAME: {
                 match = profile.getMatch();
                 if (match == null) {
                     return PlaceholderUtil.format(new ArrayList<>(ScoreboardLocale.LOBBY.getStringList()), player);
                 }
-                List<String> gameLines = match.getScoreboard(player.getUniqueId());
-                return gameLines == null ? new ArrayList<>() : gameLines;
+
+                List<String> lines;
+                try {
+                    lines = match.getScoreboard(player.getUniqueId());
+                } catch (Throwable t) {
+                    lines = null;
+                }
+
+                if (lines == null || lines.isEmpty()) {
+                    return buildPartyFallback(match, player, player.getUniqueId());
+                }
+
+                return lines;
+            }
 
             case IN_SPECTATOR:
                 match = profile.getMatch();
@@ -80,6 +95,37 @@ public class ScoreboardAdapter implements FastAdapter {
         }
 
         return new ArrayList<>();
+    }
+
+    private List<String> buildPartyFallback(Match match, Player player, UUID uuid) {
+        // Nếu bạn có locale STARTING/ENDED riêng cho PARTY thì bạn có thể map thêm theo match.getState() ở đây.
+        // Hiện tại: ưu tiên kit rule trước, rồi theo loại match (TEAM/FFA/SOLO)
+
+        if (match.getKit() != null) {
+            if (match.getKit().is(KitRule.BOXING)) {
+                if (match instanceof TeamFightMatch) {
+                    return PlaceholderUtil.format(new ArrayList<>(ScoreboardLocale.PARTY_IN_GAME_BOXING_TEAM.getStringList()), player);
+                } else if (match instanceof FfaFightMatch) {
+                    return PlaceholderUtil.format(new ArrayList<>(ScoreboardLocale.PARTY_IN_GAME_BOXING_FFA.getStringList()), player);
+                }
+                return PlaceholderUtil.format(new ArrayList<>(ScoreboardLocale.PARTY_IN_GAME_BOXING.getStringList()), player);
+            }
+
+            if (match.getKit().is(KitRule.BED_WARS)) {
+                if (match instanceof TeamFightMatch) {
+                    return PlaceholderUtil.format(new ArrayList<>(ScoreboardLocale.PARTY_IN_GAME_BEDWARS_TEAM.getStringList()), player);
+                }
+                return PlaceholderUtil.format(new ArrayList<>(ScoreboardLocale.PARTY_IN_GAME_BEDWARS.getStringList()), player);
+            }
+        }
+
+        if (match instanceof TeamFightMatch) {
+            return PlaceholderUtil.format(new ArrayList<>(ScoreboardLocale.PARTY_IN_GAME_TEAM.getStringList()), player);
+        } else if (match instanceof FfaFightMatch) {
+            return PlaceholderUtil.format(new ArrayList<>(ScoreboardLocale.PARTY_IN_GAME_FFA.getStringList()), player);
+        }
+
+        return PlaceholderUtil.format(new ArrayList<>(ScoreboardLocale.PARTY_IN_GAME.getStringList()), player);
     }
 
     private String getAnimatedText() {

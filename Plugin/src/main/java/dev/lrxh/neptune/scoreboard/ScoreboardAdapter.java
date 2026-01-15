@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ScoreboardAdapter implements FastAdapter {
+
     public String getTitle(Player player) {
         return PlaceholderUtil.format(getAnimatedText(), player);
     }
@@ -31,17 +32,30 @@ public class ScoreboardAdapter implements FastAdapter {
         switch (state) {
             case IN_LOBBY:
                 return PlaceholderUtil.format(new ArrayList<>(ScoreboardLocale.LOBBY.getStringList()), player);
+
             case IN_KIT_EDITOR:
                 return PlaceholderUtil.format(new ArrayList<>(ScoreboardLocale.KIT_EDITOR.getStringList()), player);
+
             case IN_PARTY:
                 return PlaceholderUtil.format(new ArrayList<>(ScoreboardLocale.PARTY_LOBBY.getStringList()), player);
+
             case IN_QUEUE:
                 return PlaceholderUtil.format(new ArrayList<>(ScoreboardLocale.IN_QUEUE.getStringList()), player);
+
             case IN_GAME:
                 match = profile.getMatch();
-                return match.getScoreboard(player.getUniqueId());
+                if (match == null) {
+                    return PlaceholderUtil.format(new ArrayList<>(ScoreboardLocale.LOBBY.getStringList()), player);
+                }
+                List<String> gameLines = match.getScoreboard(player.getUniqueId());
+                return gameLines == null ? new ArrayList<>() : gameLines;
+
             case IN_SPECTATOR:
                 match = profile.getMatch();
+                if (match == null) {
+                    return PlaceholderUtil.format(new ArrayList<>(ScoreboardLocale.IN_SPECTATOR.getStringList()), player);
+                }
+
                 if (match instanceof SoloFightMatch) {
                     if (match.getKit().is(KitRule.BED_WARS)) {
                         return PlaceholderUtil.format(new ArrayList<>(ScoreboardLocale.IN_SPECTATOR_BEDWARS.getStringList()), player);
@@ -55,9 +69,12 @@ public class ScoreboardAdapter implements FastAdapter {
                 } else if (match instanceof FfaFightMatch) {
                     return PlaceholderUtil.format(new ArrayList<>(ScoreboardLocale.IN_SPECTATOR_FFA.getStringList()), player);
                 }
+
                 return PlaceholderUtil.format(new ArrayList<>(ScoreboardLocale.IN_SPECTATOR.getStringList()), player);
+
             case IN_CUSTOM:
                 return PlaceholderUtil.format(ScoreboardService.get().getScoreboardLines(profile.getCustomState(), profile), player);
+
             default:
                 break;
         }

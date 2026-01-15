@@ -385,6 +385,29 @@ public class MainCommand {
         return false;
     }
 
+    @Command(name = "reload", desc = "")
+    @Require("neptune.admin")
+    public void reload(@Sender CommandSender sender) {
+        ConfigService.get().load();
+        CosmeticService.get().load();
+        HotbarService.get().load();
+
+        for (Player p : Bukkit.getOnlinePlayers()) {
+           Profile profile = API.getProfile(p);
+
+           if (profile.getState().equals(ProfileState.IN_GAME)
+                || profile.getState().equals(ProfileState.IN_KIT_EDITOR)) {
+             continue;
+           }
+
+          HotbarService.get().giveItems(p);
+      }
+
+      sender.sendMessage(CC.color("&aSuccessfully reloaded configs!"));
+    }
+
+
+
     // ====== stop server ======
 
     @Command(name = "stop", desc = "")

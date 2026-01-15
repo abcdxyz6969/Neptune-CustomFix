@@ -20,6 +20,9 @@ public class MainMenu extends Menu {
 
         buttons.add(new KitsManagementButton(12));
         buttons.add(new ArenasManagementButton(14));
+
+        buttons.add(new ReloadNeptuneButton(26)); // NEW
+
         buttons.add(new CloseMenuButton(getSize() - 9));
 
         return buttons;

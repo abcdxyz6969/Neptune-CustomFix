@@ -196,7 +196,7 @@ public enum ScoreboardLocale implements IDataAccessor {
             " &fSize: &b<size>/<party-max>",
             " ",
             "&bserver.net",
-            "&7&m--------------------");
+            "&7&m--------------------"),
     PARTY_STARTING("SCOREBOARDS.PARTY.STARTING", DataType.STRING_LIST,
             "&7&m--------------------",
             "&fMatch Starting...",
@@ -275,7 +275,7 @@ public enum ScoreboardLocale implements IDataAccessor {
             "&fMatch Ended",
             " ",
             "&bserver.net",
-            "&7&m--------------------"),
+            "&7&m--------------------");
 
     private final String path;
     private final String comment;

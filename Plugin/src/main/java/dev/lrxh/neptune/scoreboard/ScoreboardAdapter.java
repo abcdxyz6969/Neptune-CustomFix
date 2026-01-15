@@ -20,10 +20,14 @@ public class ScoreboardAdapter implements FastAdapter {
 
     @Override
     public String getTitle(Player player) {
+        String raw = getAnimatedText();
+        if (raw == null || raw.isEmpty()) raw = "Neptune";
+
         try {
-            return PlaceholderUtil.format(getAnimatedText(), player);
+            String formatted = PlaceholderUtil.format(raw, player);
+            return (formatted == null || formatted.isEmpty()) ? raw : formatted;
         } catch (Throwable ignored) {
-            return " ";
+            return raw;
         }
     }
 
@@ -159,9 +163,14 @@ public class ScoreboardAdapter implements FastAdapter {
     }
 
     private String getAnimatedText() {
-        int size = ScoreboardLocale.TITLE.getStringList().size();
-        if (size <= 0) return " ";
-        int index = (int) ((System.currentTimeMillis() / ScoreboardLocale.UPDATE_INTERVAL.getInt()) % size);
-        return ScoreboardLocale.TITLE.getStringList().get(index);
+        List<String> titles = ScoreboardLocale.TITLE.getStringList();
+        if (titles == null || titles.isEmpty()) return "Neptune";
+
+        int interval = ScoreboardLocale.UPDATE_INTERVAL.getInt();
+        if (interval <= 0) interval = 300;
+
+        int index = (int) ((System.currentTimeMillis() / interval) % titles.size());
+        String t = titles.get(index);
+        return (t == null || t.isEmpty()) ? "Neptune" : t;
     }
 }

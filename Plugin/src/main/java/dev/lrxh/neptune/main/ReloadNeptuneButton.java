@@ -32,7 +32,7 @@ public class ReloadNeptuneButton extends Button {
     }
 
     @Override
-    public void onClick(Player player, ClickType clickType) {
+    public void clicked(Player player, ClickType clickType) {
         player.performCommand("neptune reload");
     }
 }

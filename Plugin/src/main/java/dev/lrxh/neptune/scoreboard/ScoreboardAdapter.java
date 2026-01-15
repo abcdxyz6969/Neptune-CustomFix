@@ -22,7 +22,6 @@ public class ScoreboardAdapter implements FastAdapter {
     public String getTitle(Player player) {
         String raw = getAnimatedText();
         if (raw == null || raw.isEmpty()) raw = "Neptune";
-
         try {
             String formatted = PlaceholderUtil.format(raw, player);
             return (formatted == null || formatted.isEmpty()) ? raw : formatted;
@@ -41,21 +40,21 @@ public class ScoreboardAdapter implements FastAdapter {
 
             switch (profile.getState()) {
                 case IN_LOBBY:
-                    return fmt(ScoreboardLocale.LOBBY.getStringList(), player);
+                    return fromLocale(ScoreboardLocale.LOBBY, player);
 
                 case IN_KIT_EDITOR:
-                    return fmt(ScoreboardLocale.KIT_EDITOR.getStringList(), player);
+                    return fromLocale(ScoreboardLocale.KIT_EDITOR, player);
 
                 case IN_PARTY:
-                    return fmt(ScoreboardLocale.PARTY_LOBBY.getStringList(), player);
+                    return fromLocale(ScoreboardLocale.PARTY_LOBBY, player);
 
                 case IN_QUEUE:
-                    return fmt(ScoreboardLocale.IN_QUEUE.getStringList(), player);
+                    return fromLocale(ScoreboardLocale.IN_QUEUE, player);
 
                 case IN_GAME: {
                     match = profile.getMatch();
                     if (match == null) {
-                        return fmt(ScoreboardLocale.LOBBY.getStringList(), player);
+                        return fromLocale(ScoreboardLocale.LOBBY, player);
                     }
 
                     List<String> lines = null;
@@ -64,50 +63,47 @@ public class ScoreboardAdapter implements FastAdapter {
                     } catch (Throwable ignored) {
                     }
 
-                    if (lines != null && !lines.isEmpty()) {
-                        try {
-                            List<String> formatted = PlaceholderUtil.format(new ArrayList<>(lines), player);
-                            if (formatted != null && !formatted.isEmpty()) {
-                                return formatted;
-                            }
-                        } catch (Throwable ignored) {
-                        }
+                    List<String> formattedMatch = safeFormat(lines, player);
+                    if (!isEmpty(formattedMatch)) {
+                        return formattedMatch;
                     }
 
                     List<String> fallback = buildInGameFallback(match, player);
-                    if (fallback != null && !fallback.isEmpty()) {
+                    if (!isEmpty(fallback)) {
                         return fallback;
                     }
 
-                    return fmt(ScoreboardLocale.IN_GAME.getStringList(), player);
+                    // FIX: không trả LOBBY ở đây nữa
+                    return fromLocale(ScoreboardLocale.IN_GAME, player);
                 }
 
                 case IN_SPECTATOR:
                     match = profile.getMatch();
                     if (match == null) {
-                        return fmt(ScoreboardLocale.IN_SPECTATOR.getStringList(), player);
+                        return fromLocale(ScoreboardLocale.IN_SPECTATOR, player);
                     }
 
                     if (match instanceof SoloFightMatch) {
                         if (match.getKit().is(KitRule.BED_WARS)) {
-                            return fmt(ScoreboardLocale.IN_SPECTATOR_BEDWARS.getStringList(), player);
+                            return fromLocale(ScoreboardLocale.IN_SPECTATOR_BEDWARS, player);
                         }
-                        return fmt(ScoreboardLocale.IN_SPECTATOR.getStringList(), player);
+                        return fromLocale(ScoreboardLocale.IN_SPECTATOR, player);
                     } else if (match instanceof TeamFightMatch) {
                         if (match.getKit().is(KitRule.BED_WARS)) {
-                            return fmt(ScoreboardLocale.IN_SPECTATOR_BEDWARS.getStringList(), player);
+                            return fromLocale(ScoreboardLocale.IN_SPECTATOR_BEDWARS, player);
                         }
-                        return fmt(ScoreboardLocale.IN_SPECTATOR_TEAM.getStringList(), player);
+                        return fromLocale(ScoreboardLocale.IN_SPECTATOR_TEAM, player);
                     } else if (match instanceof FfaFightMatch) {
-                        return fmt(ScoreboardLocale.IN_SPECTATOR_FFA.getStringList(), player);
+                        return fromLocale(ScoreboardLocale.IN_SPECTATOR_FFA, player);
                     }
 
-                    return fmt(ScoreboardLocale.IN_SPECTATOR.getStringList(), player);
+                    return fromLocale(ScoreboardLocale.IN_SPECTATOR, player);
 
                 case IN_CUSTOM:
                     try {
                         List<String> custom = ScoreboardService.get().getScoreboardLines(profile.getCustomState(), profile);
-                        return safeLines(custom, player);
+                        List<String> formatted = safeFormat(custom, player);
+                        return isEmpty(formatted) ? Collections.singletonList(" ") : formatted;
                     } catch (Throwable ignored) {
                         return Collections.singletonList(" ");
                     }
@@ -124,46 +120,70 @@ public class ScoreboardAdapter implements FastAdapter {
         if (match.getKit() != null) {
             if (match.getKit().is(KitRule.BOXING)) {
                 if (match instanceof TeamFightMatch) {
-                    return fmt(ScoreboardLocale.IN_GAME_BOXING_TEAM.getStringList(), player);
+                    return fromLocale(ScoreboardLocale.IN_GAME_BOXING_TEAM, player);
                 }
-                return fmt(ScoreboardLocale.IN_GAME_BOXING.getStringList(), player);
+                return fromLocale(ScoreboardLocale.IN_GAME_BOXING, player);
             }
 
             if (match.getKit().is(KitRule.BED_WARS)) {
                 if (match instanceof TeamFightMatch) {
-                    return fmt(ScoreboardLocale.IN_GAME_BEDWARS_TEAM.getStringList(), player);
+                    return fromLocale(ScoreboardLocale.IN_GAME_BEDWARS_TEAM, player);
                 }
-                return fmt(ScoreboardLocale.IN_GAME_BEDWARS.getStringList(), player);
+                return fromLocale(ScoreboardLocale.IN_GAME_BEDWARS, player);
             }
         }
 
         if (match instanceof TeamFightMatch) {
-            return fmt(ScoreboardLocale.IN_GAME_TEAM.getStringList(), player);
+            return fromLocale(ScoreboardLocale.IN_GAME_TEAM, player);
         }
 
         if (match instanceof FfaFightMatch) {
-            return fmt(ScoreboardLocale.IN_GAME_FFA.getStringList(), player);
+            return fromLocale(ScoreboardLocale.IN_GAME_FFA, player);
         }
 
-        return fmt(ScoreboardLocale.IN_GAME.getStringList(), player);
+        return fromLocale(ScoreboardLocale.IN_GAME, player);
     }
 
-    private List<String> safeLines(List<String> lines, Player player) {
-        if (lines == null || lines.isEmpty()) return Collections.singletonList(" ");
+    private List<String> fromLocale(ScoreboardLocale locale, Player player) {
+        List<String> raw = locale.getStringList();
+
+        // quan trọng: nếu config trả rỗng, dùng defaultValue trong enum
+        if (raw == null || raw.isEmpty()) {
+            Object def = locale.getDefaultValue();
+            if (def instanceof List) {
+                //noinspection unchecked
+                raw = (List<String>) def;
+            }
+        }
+
+        List<String> formatted = safeFormat(raw, player);
+        return isEmpty(formatted) ? Collections.singletonList(" ") : formatted;
+    }
+
+    private List<String> safeFormat(List<String> lines, Player player) {
+        if (lines == null || lines.isEmpty()) return Collections.emptyList();
         try {
             List<String> formatted = PlaceholderUtil.format(new ArrayList<>(lines), player);
-            return (formatted == null || formatted.isEmpty()) ? Collections.singletonList(" ") : formatted;
+            return formatted == null ? Collections.emptyList() : formatted;
         } catch (Throwable ignored) {
-            return Collections.singletonList(" ");
+            return Collections.emptyList();
         }
     }
 
-    private List<String> fmt(List<String> lines, Player player) {
-        return safeLines(lines, player);
+    private boolean isEmpty(List<String> lines) {
+        return lines == null || lines.isEmpty();
     }
 
     private String getAnimatedText() {
         List<String> titles = ScoreboardLocale.TITLE.getStringList();
+        if (titles == null || titles.isEmpty()) {
+            Object def = ScoreboardLocale.TITLE.getDefaultValue();
+            if (def instanceof List) {
+                //noinspection unchecked
+                titles = (List<String>) def;
+            }
+        }
+
         if (titles == null || titles.isEmpty()) return "Neptune";
 
         int interval = ScoreboardLocale.UPDATE_INTERVAL.getInt();

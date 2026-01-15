@@ -1,143 +1,104 @@
 package dev.lrxh.neptune.scoreboard;
 
-import dev.lrxh.neptune.API;
-import dev.lrxh.neptune.configs.impl.ScoreboardLocale;
-import dev.lrxh.neptune.game.kit.impl.KitRule;
-import dev.lrxh.neptune.game.match.Match;
-import dev.lrxh.neptune.game.match.impl.ffa.FfaFightMatch;
-import dev.lrxh.neptune.game.match.impl.solo.SoloFightMatch;
-import dev.lrxh.neptune.game.match.impl.team.TeamFightMatch;
-import dev.lrxh.neptune.profile.data.ProfileState;
-import dev.lrxh.neptune.profile.impl.Profile;
-import dev.lrxh.neptune.providers.placeholder.PlaceholderUtil;
-import fr.mrmicky.fastboard.FastAdapter;
+import dev.lrxh.neptune.Neptune;
+import dev.lrxh.neptune.kit.Kit;
+import dev.lrxh.neptune.match.Match;
+import dev.lrxh.neptune.match.MatchType;
+import dev.lrxh.neptune.profile.Profile;
+import dev.lrxh.neptune.scoreboard.locale.ScoreboardLocale;
+import fr.mrmicky.fastboard.adventure.FastBoard;
 import org.bukkit.entity.Player;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-public class ScoreboardAdapter implements FastAdapter {
+public class ScoreboardAdapter {
 
-    @Override
-    public String getTitle(Player player) {
-        return PlaceholderUtil.format(getAnimatedText(), player);
+    private final Neptune plugin;
+
+    public ScoreboardAdapter(Neptune plugin) {
+        this.plugin = plugin;
     }
 
-    @Override
-    public List<String> getLines(Player player) {
-        Profile profile = API.getProfile(player);
-        if (profile == null) return new ArrayList<>();
+    public String getTitle(Player player) {
+        try {
+            Profile profile = plugin.getProfileService().getProfile(player.getUniqueId());
+            if (profile == null) return " ";
 
-        Match match;
+            Match match = profile.getMatch();
+            ScoreboardLocale locale = resolveLocale(profile, match);
+            return locale != null ? locale.getTitle(profile) : " ";
+        } catch (Exception ignored) {
+            return " ";
+        }
+    }
 
-        switch (profile.getState()) {
-            case IN_LOBBY:
-                return fmt(ScoreboardLocale.LOBBY.getStringList(), player);
-
-            case IN_KIT_EDITOR:
-                return fmt(ScoreboardLocale.KIT_EDITOR.getStringList(), player);
-
-            case IN_PARTY:
-                return fmt(ScoreboardLocale.PARTY_LOBBY.getStringList(), player);
-
-            case IN_QUEUE:
-                return fmt(ScoreboardLocale.IN_QUEUE.getStringList(), player);
-
-            case IN_GAME: {
-                match = profile.getMatch();
-                if (match == null) {
-                    return fmt(ScoreboardLocale.LOBBY.getStringList(), player);
-                }
-
-                List<String> lines = null;
-                try {
-                    lines = match.getScoreboard(player.getUniqueId());
-                } catch (Throwable ignored) {
-                }
-
-                if (lines != null && !lines.isEmpty()) {
-                    return lines;
-                }
-
-                // fallback theo loại match + kit rule
-                List<String> fallback = buildInGameFallback(match, player);
-                if (fallback != null && !fallback.isEmpty()) {
-                    return fallback;
-                }
-
-                return fmt(ScoreboardLocale.LOBBY.getStringList(), player);
+    public List<String> getLines(Player player, FastBoard board) {
+        try {
+            Profile profile = plugin.getProfileService().getProfile(player.getUniqueId());
+            if (profile == null) {
+                return Collections.singletonList(" ");
             }
 
-            case IN_SPECTATOR:
-                match = profile.getMatch();
-                if (match == null) {
-                    return fmt(ScoreboardLocale.IN_SPECTATOR.getStringList(), player);
-                }
+            Match match = profile.getMatch();
+            ScoreboardLocale locale = resolveLocale(profile, match);
 
-                if (match instanceof SoloFightMatch) {
-                    if (match.getKit().is(KitRule.BED_WARS)) {
-                        return fmt(ScoreboardLocale.IN_SPECTATOR_BEDWARS.getStringList(), player);
-                    }
-                    return fmt(ScoreboardLocale.IN_SPECTATOR.getStringList(), player);
-                } else if (match instanceof TeamFightMatch) {
-                    if (match.getKit().is(KitRule.BED_WARS)) {
-                        return fmt(ScoreboardLocale.IN_SPECTATOR_BEDWARS.getStringList(), player);
-                    }
-                    return fmt(ScoreboardLocale.IN_SPECTATOR_TEAM.getStringList(), player);
-                } else if (match instanceof FfaFightMatch) {
-                    return fmt(ScoreboardLocale.IN_SPECTATOR_FFA.getStringList(), player);
-                }
+            if (locale == null) {
+                return Collections.singletonList(" ");
+            }
 
-                return fmt(ScoreboardLocale.IN_SPECTATOR.getStringList(), player);
+            List<String> lines = locale.getLines(profile);
+            return (lines == null || lines.isEmpty())
+                    ? Collections.singletonList(" ")
+                    : lines;
 
-            case IN_CUSTOM:
-                return PlaceholderUtil.format(
-                        ScoreboardService.get().getScoreboardLines(profile.getCustomState(), profile),
-                        player
-                );
+        } catch (Exception ignored) {
+            return Collections.singletonList(" ");
+        }
+    }
+
+    private ScoreboardLocale resolveLocale(Profile profile, Match match) {
+        ScoreboardService service = plugin.getScoreboardService();
+
+        if (match == null) {
+            return service.getLocale(ScoreboardLocale.IN_LOBBY);
+        }
+
+        Kit kit = match.getKit();
+        MatchType type = match.getType();
+        boolean teamMatch = match.isTeamMatch();
+
+        try {
+            ScoreboardLocale matchLocale = match.getScoreboard(profile);
+            if (matchLocale != null && !matchLocale.getLines(profile).isEmpty()) {
+                return matchLocale;
+            }
+        } catch (Exception ignored) {
+        }
+
+        if (kit != null) {
+            switch (kit.getRule()) {
+                case BOXING:
+                    return service.getLocale(teamMatch
+                            ? ScoreboardLocale.IN_GAME_BOXING_TEAM
+                            : ScoreboardLocale.IN_GAME_BOXING);
+
+                case BEDWARS:
+                    return service.getLocale(teamMatch
+                            ? ScoreboardLocale.IN_GAME_BEDWARS_TEAM
+                            : ScoreboardLocale.IN_GAME_BEDWARS);
+            }
+        }
+
+        switch (type) {
+            case FFA:
+                return service.getLocale(ScoreboardLocale.IN_GAME_FFA);
+
+            case TEAM:
+                return service.getLocale(ScoreboardLocale.IN_GAME_TEAM);
 
             default:
-                return new ArrayList<>();
+                return service.getLocale(ScoreboardLocale.IN_GAME);
         }
-    }
-
-    private List<String> buildInGameFallback(Match match, Player player) {
-        if (match.getKit() != null) {
-            if (match.getKit().is(KitRule.BOXING)) {
-                if (match instanceof TeamFightMatch) {
-                    return fmt(ScoreboardLocale.IN_GAME_BOXING_TEAM.getStringList(), player);
-                }
-                return fmt(ScoreboardLocale.IN_GAME_BOXING.getStringList(), player);
-            }
-
-            if (match.getKit().is(KitRule.BED_WARS)) {
-                if (match instanceof TeamFightMatch) {
-                    return fmt(ScoreboardLocale.IN_GAME_BEDWARS_TEAM.getStringList(), player);
-                }
-                return fmt(ScoreboardLocale.IN_GAME_BEDWARS.getStringList(), player);
-            }
-        }
-
-        if (match instanceof TeamFightMatch) {
-            return fmt(ScoreboardLocale.IN_GAME_TEAM.getStringList(), player);
-        }
-
-        if (match instanceof FfaFightMatch) {
-            return fmt(ScoreboardLocale.IN_GAME_FFA.getStringList(), player);
-        }
-
-        return fmt(ScoreboardLocale.IN_GAME.getStringList(), player);
-    }
-
-    private List<String> fmt(List<String> lines, Player player) {
-        if (lines == null) return new ArrayList<>();
-        return PlaceholderUtil.format(new ArrayList<>(lines), player);
-    }
-
-    private String getAnimatedText() {
-        int size = ScoreboardLocale.TITLE.getStringList().size();
-        if (size <= 0) return " ";
-        int index = (int) ((System.currentTimeMillis() / ScoreboardLocale.UPDATE_INTERVAL.getInt()) % size);
-        return ScoreboardLocale.TITLE.getStringList().get(index);
     }
 }

@@ -31,8 +31,28 @@ public class ReloadNeptuneButton extends Button {
         return item;
     }
 
-    @Override
-    public void clicked(Player player, ClickType clickType) {
+    private void handle(Player player) {
         player.performCommand("neptune reload");
+    }
+
+    // Các signature hay gặp trong các base Menu/Button khác nhau
+    public void clicked(Player player, ClickType clickType) {
+        handle(player);
+    }
+
+    public void clicked(Player player, int slot, ClickType clickType) {
+        handle(player);
+    }
+
+    public void clicked(Player player, int slot, ClickType clickType, int hotbarButton) {
+        handle(player);
+    }
+
+    public void onClick(Player player, ClickType clickType) {
+        handle(player);
+    }
+
+    public void onClick(Player player, int slot, ClickType clickType) {
+        handle(player);
     }
 }

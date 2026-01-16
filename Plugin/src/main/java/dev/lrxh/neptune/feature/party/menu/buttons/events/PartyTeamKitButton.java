@@ -8,7 +8,7 @@ import dev.lrxh.neptune.game.kit.Kit;
 import dev.lrxh.neptune.game.match.MatchService;
 import dev.lrxh.neptune.game.match.impl.ffa.PartyFfaFightMatch;
 import dev.lrxh.neptune.game.match.impl.participant.Participant;
-import dev.lrxh.neptune.utils.CC;
+import dev.lrxh.neptune.game.match.impl.participant.ParticipantColor;
 import dev.lrxh.neptune.utils.ItemBuilder;
 import dev.lrxh.neptune.utils.menu.Button;
 import org.bukkit.Bukkit;
@@ -41,24 +41,27 @@ public class PartyTeamKitButton extends Button {
             participants.add(new Participant(user));
         }
 
-        if (eventType.equals(EventType.FFA) && party.isFfaRespawnEnabled()) {
+        // Party FFA Respawn mode
+        if (eventType == EventType.FFA && party.isFfaRespawnEnabled()) {
+
+            // IMPORTANT: set colors to avoid NPE in teleportToPositions()
+            for (int i = 0; i < participants.size(); i++) {
+                participants.get(i).setColor((i % 2 == 0) ? ParticipantColor.RED : ParticipantColor.BLUE);
+            }
+
             kit.getRandomArena().thenAccept(arena -> {
-                if (arena == null) {
-                    for (Participant p : participants) p.sendMessage(CC.error("No arenas were found!"));
-                    return;
-                }
-                if (!arena.isSetup() || !arena.isDoneLoading()) {
-                    for (Participant p : participants) p.sendMessage(CC.error("Arena wasn't setup up properly! Please contact an admin if you see this."));
-                    return;
-                }
+                if (arena == null) return;
+                if (!arena.isSetup() || !arena.isDoneLoading()) return;
 
                 Bukkit.getScheduler().runTask(Neptune.get(), () -> {
                     MatchService.get().startMatch(new PartyFfaFightMatch(arena, kit, participants, true));
                 });
             });
+
             return;
         }
 
+        // Default behavior
         eventType.start(participants, kit);
     }
 

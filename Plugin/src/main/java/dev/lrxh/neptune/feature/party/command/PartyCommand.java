@@ -9,6 +9,7 @@ import dev.lrxh.neptune.feature.party.Party;
 import dev.lrxh.neptune.feature.party.impl.EventType;
 import dev.lrxh.neptune.feature.party.impl.PartyRequest;
 import dev.lrxh.neptune.feature.party.menu.PartyEventsKitMenu;
+import dev.lrxh.neptune.feature.party.menu.buttons.event.PartyDuelMenu;
 import dev.lrxh.neptune.profile.data.ProfileState;
 import dev.lrxh.neptune.profile.impl.Profile;
 import dev.lrxh.neptune.providers.clickable.Replacement;
@@ -217,6 +218,27 @@ public class PartyCommand {
         }
 
         new PartyEventsKitMenu(party, EventType.TEAM).open(player);
+    }
+
+    @Command(name = "partyduel", desc = "")
+    public void partyduel(@Sender Player player) {
+        Profile profile = API.getProfile(player);
+        Party party = profile.getGameData().getParty();
+
+        if (party == null) {
+            MessagesLocale.PARTY_NOT_IN.send(player.getUniqueId());
+            return;
+        }
+        if (!party.getLeader().equals(player.getUniqueId())) {
+            MessagesLocale.PARTY_NO_PERMISSION.send(player.getUniqueId());
+            return;
+        }
+        if (party.getUsers().size() < 2) {
+            MessagesLocale.PARTY_NOT_ENOUGH_MEMBERS.send(player.getUniqueId());
+            return;
+        }
+
+        new PartyDuelMenu(party).open(player);
     }
 
     @Command(name = "advertise", desc = "")

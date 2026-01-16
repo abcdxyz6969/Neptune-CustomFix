@@ -128,13 +128,6 @@ public class Profile implements IProfile {
                     settingData.setKillMessagePackage(
                             CosmeticService.get().getDeathMessagePackage(settings.getString("deathMessagePackage")));
 
-                    // DataDocument globalCustomPersistentData = dataDocument.getDataDocument("customPersistentData");
-                    // if (globalCustomPersistentData != null) {
-                    //     for (String key : globalCustomPersistentData.data.keySet()) {
-                    //         gameData.setPersistentData(key, globalCustomPersistentData.data.get(key));
-                    //     }
-                    // }
-
                     gameData.getGlobalStats().update();
 
                     return profile;
@@ -279,7 +272,6 @@ public class Profile implements IProfile {
         return customState != null && !customState.isEmpty() ? customState : "neptune:unknown";
     }
 
-
     public boolean hasState(ProfileState... profileStates) {
         for (ProfileState profileState : profileStates) {
             if (profileState.equals(state)) {
@@ -423,8 +415,16 @@ public class Profile implements IProfile {
     }
 
     public int getPartyLimit() {
+        Player player = getPlayer();
+        if (player != null && player.hasPermission("neptune.partybypassmaxlimitplayer")) {
+            return 1000;
+        }
+
         int max = 10;
-        for (PermissionAttachmentInfo perm : getPlayer().getEffectivePermissions()) {
+        Player p = getPlayer();
+        if (p == null) return max;
+
+        for (PermissionAttachmentInfo perm : p.getEffectivePermissions()) {
             String permission = perm.getPermission();
             if (permission.startsWith("neptune.party.max.")) {
                 try {

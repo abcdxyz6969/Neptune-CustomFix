@@ -24,6 +24,7 @@ import java.util.function.Consumer;
 public class Party {
     private final HashSet<UUID> users;
     private final boolean duelRequest;
+    private boolean ffaRespawnEnabled;
     private final Neptune plugin;
     private UUID leader;
     private boolean open;

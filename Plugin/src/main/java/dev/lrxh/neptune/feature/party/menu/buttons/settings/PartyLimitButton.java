@@ -13,7 +13,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
 
-
 public class PartyLimitButton extends Button {
     private final Party party;
 
@@ -26,11 +25,16 @@ public class PartyLimitButton extends Button {
     public void onClick(ClickType type, Player player) {
         if (type.equals(ClickType.LEFT)) {
             Profile profile = API.getProfile(player);
-            if (party.getMaxUsers() + 1 > profile.getPartyLimit()) {
-                MessagesLocale.PARTY_MAX_SIZE_SETTING.send(player, new Replacement("<max>", String.valueOf(profile.getPartyLimit())));
+
+            boolean bypass = player.hasPermission("neptune.partybypassmaxlimitplayer");
+            int limit = bypass ? 1000 : profile.getPartyLimit();
+
+            if (party.getMaxUsers() + 1 > limit) {
+                MessagesLocale.PARTY_MAX_SIZE_SETTING.send(player, new Replacement("<max>", String.valueOf(limit)));
                 return;
             }
             party.setMaxUsers(party.getMaxUsers() + 1);
+
         } else if (type.equals(ClickType.RIGHT)) {
             party.setMaxUsers(Math.max(party.getUsers().size(), party.getMaxUsers() - 1));
         }
@@ -40,9 +44,10 @@ public class PartyLimitButton extends Button {
     public ItemStack getItemStack(Player player) {
         return new ItemBuilder(MenusLocale.PARTY_SETTINGS_MAX_SIZE_MATERIAL.getString())
                 .name(MenusLocale.PARTY_SETTINGS_MAX_SIZE_TITLE.getString())
-                .lore(ItemUtils.getLore(MenusLocale.PARTY_SETTINGS_MAX_SIZE_LORE.getStringList(),
-                        new Replacement("<size>", String.valueOf(party.getMaxUsers()))), player)
-
+                .lore(ItemUtils.getLore(
+                        MenusLocale.PARTY_SETTINGS_MAX_SIZE_LORE.getStringList(),
+                        new Replacement("<size>", String.valueOf(party.getMaxUsers()))
+                ), player)
                 .build();
     }
 }

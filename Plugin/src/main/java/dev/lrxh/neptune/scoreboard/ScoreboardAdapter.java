@@ -32,87 +32,78 @@ public class ScoreboardAdapter implements FastAdapter {
 
     @Override
     public List<String> getLines(Player player) {
-        try {
-            Profile profile = API.getProfile(player);
-            if (profile == null) return Collections.singletonList(" ");
+        Profile profile = API.getProfile(player);
+        if (profile == null) return Collections.singletonList(" ");
 
-            Match match;
+        Match match;
 
-            switch (profile.getState()) {
-                case IN_LOBBY:
-                    return fromLocale(ScoreboardLocale.LOBBY, player);
+        switch (profile.getState()) {
+            case IN_LOBBY:
+                return fmt(safeLocaleList(ScoreboardLocale.LOBBY), player);
 
-                case IN_KIT_EDITOR:
-                    return fromLocale(ScoreboardLocale.KIT_EDITOR, player);
+            case IN_KIT_EDITOR:
+                return fmt(safeLocaleList(ScoreboardLocale.KIT_EDITOR), player);
 
-                case IN_PARTY:
-                    return fromLocale(ScoreboardLocale.PARTY_LOBBY, player);
+            case IN_PARTY:
+                return fmt(safeLocaleList(ScoreboardLocale.PARTY_LOBBY), player);
 
-                case IN_QUEUE:
-                    return fromLocale(ScoreboardLocale.IN_QUEUE, player);
+            case IN_QUEUE:
+                return fmt(safeLocaleList(ScoreboardLocale.IN_QUEUE), player);
 
-                case IN_GAME: {
-                    match = profile.getMatch();
-                    if (match == null) {
-                        return fromLocale(ScoreboardLocale.LOBBY, player);
-                    }
-
-                    List<String> lines = null;
-                    try {
-                        lines = match.getScoreboard(player.getUniqueId());
-                    } catch (Throwable ignored) {
-                    }
-
-                    List<String> formattedMatch = safeFormat(lines, player);
-                    if (!isEmpty(formattedMatch)) {
-                        return formattedMatch;
-                    }
-
-                    List<String> fallback = buildInGameFallback(match, player);
-                    if (!isEmpty(fallback)) {
-                        return fallback;
-                    }
-
-                    // FIX: không trả LOBBY ở đây nữa
-                    return fromLocale(ScoreboardLocale.IN_GAME, player);
+            case IN_GAME: {
+                match = profile.getMatch();
+                if (match == null) {
+                    return fmt(safeLocaleList(ScoreboardLocale.LOBBY), player);
                 }
 
-                case IN_SPECTATOR:
-                    match = profile.getMatch();
-                    if (match == null) {
-                        return fromLocale(ScoreboardLocale.IN_SPECTATOR, player);
-                    }
+                List<String> lines = null;
+                try {
+                    lines = match.getScoreboard(player.getUniqueId());
+                } catch (Throwable ignored) {
+                }
 
-                    if (match instanceof SoloFightMatch) {
-                        if (match.getKit().is(KitRule.BED_WARS)) {
-                            return fromLocale(ScoreboardLocale.IN_SPECTATOR_BEDWARS, player);
-                        }
-                        return fromLocale(ScoreboardLocale.IN_SPECTATOR, player);
-                    } else if (match instanceof TeamFightMatch) {
-                        if (match.getKit().is(KitRule.BED_WARS)) {
-                            return fromLocale(ScoreboardLocale.IN_SPECTATOR_BEDWARS, player);
-                        }
-                        return fromLocale(ScoreboardLocale.IN_SPECTATOR_TEAM, player);
-                    } else if (match instanceof FfaFightMatch) {
-                        return fromLocale(ScoreboardLocale.IN_SPECTATOR_FFA, player);
-                    }
+                List<String> matchLines = safeFormat(lines, player);
+                if (!matchLines.isEmpty()) return matchLines;
 
-                    return fromLocale(ScoreboardLocale.IN_SPECTATOR, player);
+                List<String> fallback = buildInGameFallback(match, player);
+                if (fallback != null && !fallback.isEmpty()) {
+                    return fallback;
+                }
 
-                case IN_CUSTOM:
-                    try {
-                        List<String> custom = ScoreboardService.get().getScoreboardLines(profile.getCustomState(), profile);
-                        List<String> formatted = safeFormat(custom, player);
-                        return isEmpty(formatted) ? Collections.singletonList(" ") : formatted;
-                    } catch (Throwable ignored) {
-                        return Collections.singletonList(" ");
-                    }
-
-                default:
-                    return Collections.singletonList(" ");
+                return fmt(safeLocaleList(ScoreboardLocale.IN_GAME), player);
             }
-        } catch (Throwable ignored) {
-            return Collections.singletonList(" ");
+
+            case IN_SPECTATOR:
+                match = profile.getMatch();
+                if (match == null) {
+                    return fmt(safeLocaleList(ScoreboardLocale.IN_SPECTATOR), player);
+                }
+
+                if (match instanceof SoloFightMatch) {
+                    if (match.getKit().is(KitRule.BED_WARS)) {
+                        return fmt(safeLocaleList(ScoreboardLocale.IN_SPECTATOR_BEDWARS), player);
+                    }
+                    return fmt(safeLocaleList(ScoreboardLocale.IN_SPECTATOR), player);
+                } else if (match instanceof TeamFightMatch) {
+                    if (match.getKit().is(KitRule.BED_WARS)) {
+                        return fmt(safeLocaleList(ScoreboardLocale.IN_SPECTATOR_BEDWARS), player);
+                    }
+                    return fmt(safeLocaleList(ScoreboardLocale.IN_SPECTATOR_TEAM), player);
+                } else if (match instanceof FfaFightMatch) {
+                    return fmt(safeLocaleList(ScoreboardLocale.IN_SPECTATOR_FFA), player);
+                }
+
+                return fmt(safeLocaleList(ScoreboardLocale.IN_SPECTATOR), player);
+
+            case IN_CUSTOM:
+                try {
+                    return fmt(ScoreboardService.get().getScoreboardLines(profile.getCustomState(), profile), player);
+                } catch (Throwable ignored) {
+                    return Collections.singletonList(" ");
+                }
+
+            default:
+                return Collections.singletonList(" ");
         }
     }
 
@@ -120,44 +111,33 @@ public class ScoreboardAdapter implements FastAdapter {
         if (match.getKit() != null) {
             if (match.getKit().is(KitRule.BOXING)) {
                 if (match instanceof TeamFightMatch) {
-                    return fromLocale(ScoreboardLocale.IN_GAME_BOXING_TEAM, player);
+                    return fmt(safeLocaleList(ScoreboardLocale.IN_GAME_BOXING_TEAM), player);
                 }
-                return fromLocale(ScoreboardLocale.IN_GAME_BOXING, player);
+                return fmt(safeLocaleList(ScoreboardLocale.IN_GAME_BOXING), player);
             }
 
             if (match.getKit().is(KitRule.BED_WARS)) {
                 if (match instanceof TeamFightMatch) {
-                    return fromLocale(ScoreboardLocale.IN_GAME_BEDWARS_TEAM, player);
+                    return fmt(safeLocaleList(ScoreboardLocale.IN_GAME_BEDWARS_TEAM), player);
                 }
-                return fromLocale(ScoreboardLocale.IN_GAME_BEDWARS, player);
+                return fmt(safeLocaleList(ScoreboardLocale.IN_GAME_BEDWARS), player);
             }
         }
 
         if (match instanceof TeamFightMatch) {
-            return fromLocale(ScoreboardLocale.IN_GAME_TEAM, player);
+            return fmt(safeLocaleList(ScoreboardLocale.IN_GAME_TEAM), player);
         }
 
         if (match instanceof FfaFightMatch) {
-            return fromLocale(ScoreboardLocale.IN_GAME_FFA, player);
+            return fmt(safeLocaleList(ScoreboardLocale.IN_GAME_FFA), player);
         }
 
-        return fromLocale(ScoreboardLocale.IN_GAME, player);
+        return fmt(safeLocaleList(ScoreboardLocale.IN_GAME), player);
     }
 
-    private List<String> fromLocale(ScoreboardLocale locale, Player player) {
-        List<String> raw = locale.getStringList();
-
-        // quan trọng: nếu config trả rỗng, dùng defaultValue trong enum
-        if (raw == null || raw.isEmpty()) {
-            Object def = locale.getDefaultValue();
-            if (def instanceof List) {
-                //noinspection unchecked
-                raw = (List<String>) def;
-            }
-        }
-
-        List<String> formatted = safeFormat(raw, player);
-        return isEmpty(formatted) ? Collections.singletonList(" ") : formatted;
+    private List<String> fmt(List<String> lines, Player player) {
+        List<String> formatted = safeFormat(lines, player);
+        return formatted.isEmpty() ? Collections.singletonList(" ") : formatted;
     }
 
     private List<String> safeFormat(List<String> lines, Player player) {
@@ -170,25 +150,20 @@ public class ScoreboardAdapter implements FastAdapter {
         }
     }
 
-    private boolean isEmpty(List<String> lines) {
-        return lines == null || lines.isEmpty();
+    private List<String> safeLocaleList(ScoreboardLocale locale) {
+        List<String> list = locale.getStringList();
+        if (list == null || list.isEmpty()) {
+            List<String> def = locale.getDefaultValue();
+            return def == null ? Collections.emptyList() : def;
+        }
+        return list;
     }
 
     private String getAnimatedText() {
-        List<String> titles = ScoreboardLocale.TITLE.getStringList();
-        if (titles == null || titles.isEmpty()) {
-            Object def = ScoreboardLocale.TITLE.getDefaultValue();
-            if (def instanceof List) {
-                //noinspection unchecked
-                titles = (List<String>) def;
-            }
-        }
-
-        if (titles == null || titles.isEmpty()) return "Neptune";
-
+        List<String> titles = safeLocaleList(ScoreboardLocale.TITLE);
+        if (titles.isEmpty()) return "Neptune";
         int interval = ScoreboardLocale.UPDATE_INTERVAL.getInt();
         if (interval <= 0) interval = 300;
-
         int index = (int) ((System.currentTimeMillis() / interval) % titles.size());
         String t = titles.get(index);
         return (t == null || t.isEmpty()) ? "Neptune" : t;

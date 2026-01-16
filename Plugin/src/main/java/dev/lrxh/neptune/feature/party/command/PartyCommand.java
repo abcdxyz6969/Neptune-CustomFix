@@ -9,7 +9,7 @@ import dev.lrxh.neptune.feature.party.Party;
 import dev.lrxh.neptune.feature.party.impl.EventType;
 import dev.lrxh.neptune.feature.party.impl.PartyRequest;
 import dev.lrxh.neptune.feature.party.menu.PartyEventsKitMenu;
-import dev.lrxh.neptune.feature.party.menu.buttons.event.PartyDuelMenu;
+import dev.lrxh.neptune.feature.party.menu.buttons.events.PartyDuelMenu;
 import dev.lrxh.neptune.profile.data.ProfileState;
 import dev.lrxh.neptune.profile.impl.Profile;
 import dev.lrxh.neptune.providers.clickable.Replacement;

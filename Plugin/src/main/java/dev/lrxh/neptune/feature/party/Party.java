@@ -160,11 +160,12 @@ public class Party {
                 new Replacement("<target>", target.getName()));
     }
 
-    public boolean advertise() {
-        Profile leaderProfile = API.getProfile(leader);
+    boolean bypass = leaderPlayer != null && leaderPlayer.hasPermission("neptune.partycooldownbypass");
 
-        if (leaderProfile.hasCooldownEnded("party_advertise")) {
+    if (bypass || leaderProfile.hasCooldownEnded("party_advertise")) {
+        if (!bypass) {
             leaderProfile.addCooldown("party_advertise", 300_000);
+        }
 
             setOpen(true);
             for (Profile profile : ProfileService.get().profiles.values()) {

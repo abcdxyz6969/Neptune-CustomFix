@@ -36,10 +36,17 @@ public class PartyAdvertisementButton extends Button {
     public ItemStack getItemStack(Player player) {
         Profile profile = API.getProfile(player);
 
-        return new ItemBuilder(MenusLocale.PARTY_SETTINGS_ADVERTISEMENTS_MATERIAL.getString())
-                .name(MenusLocale.PARTY_SETTINGS_ADVERTISEMENTS_TITLE.getString())
-                .lore(profile.hasCooldownEnded("party_advertise") ? MenusLocale.PARTY_SETTINGS_ADVERTISEMENTS_LORE_NO_COOLDOWN.getStringList() : ItemUtils.getLore(MenusLocale.PARTY_SETTINGS_ADVERTISEMENTS_LORE_COOLDOWN.getStringList(), new Replacement("<cooldown>", profile.getCooldowns().get("party_advertise").formatMinutesSeconds())), player)
+        boolean bypass = player.hasPermission("neptune.partycooldownbypass");
 
+        return new ItemBuilder(MenusLocale.PARTY_SETTINGS_ADVERTISEMENTS_MATERIAL.getString())
+                 .name(MenusLocale.PARTY_SETTINGS_ADVERTISEMENTS_TITLE.getString())
+                 .lore((bypass || profile.hasCooldownEnded("party_advertise"))
+                                 ? MenusLocale.PARTY_SETTINGS_ADVERTISEMENTS_LORE_NO_COOLDOWN.getStringList()
+                                 : ItemUtils.getLore(
+                                         MenusLocale.PARTY_SETTINGS_ADVERTISEMENTS_LORE_COOLDOWN.getStringList(),
+                                         new Replacement("<cooldown>", profile.getCooldowns().get("party_advertise").formatMinutesSeconds())
+                                 ),
+                      player
+                 )
                 .build();
-    }
 }

@@ -178,6 +178,47 @@ public class PartyCommand {
         party.transfer(player, target);
     }
 
+    @Command(name = "ffa", desc = "")
+    public void ffa(@Sender Player player) {
+        Profile profile = API.getProfile(player);
+        Party party = profile.getGameData().getParty();
+        if (party == null) {
+           MessagesLocale.PARTY_NOT_IN.send(player.getUniqueId());
+           return;
+        }
+       if (!party.getLeader().equals(player.getUniqueId())) {
+           MessagesLocale.PARTY_NO_PERMISSION.send(player.getUniqueId());
+           return;
+       }
+       if (party.getUsers().size() < 2) {
+           MessagesLocale.PARTY_NOT_ENOUGH_MEMBERS.send(player.getUniqueId());
+           return;
+       }
+
+       new PartyEventsKitMenu(party, EventType.FFA).open(player);
+    }
+
+@Command(name = "split", desc = "")
+public void split(@Sender Player player) {
+    Profile profile = API.getProfile(player);
+    Party party = profile.getGameData().getParty();
+    if (party == null) {
+        MessagesLocale.PARTY_NOT_IN.send(player.getUniqueId());
+        return;
+    }
+    if (!party.getLeader().equals(player.getUniqueId())) {
+        MessagesLocale.PARTY_NO_PERMISSION.send(player.getUniqueId());
+        return;
+    }
+    if (party.getUsers().size() < 2) {
+        MessagesLocale.PARTY_NOT_ENOUGH_MEMBERS.send(player.getUniqueId());
+        return;
+    }
+
+    new PartyEventsKitMenu(party, EventType.TEAM).open(player);
+}
+
+
     @Command(name = "advertise", desc = "")
     @Require("neptune.party.advertise")
     public void advertise(@Sender Player player) {

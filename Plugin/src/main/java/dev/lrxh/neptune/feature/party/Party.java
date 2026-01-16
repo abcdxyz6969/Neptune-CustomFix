@@ -160,14 +160,21 @@ public class Party {
                 new Replacement("<target>", target.getName()));
     }
 
-    boolean bypass = leaderPlayer != null && leaderPlayer.hasPermission("neptune.partycooldownbypass");
+    public boolean advertise() {
+        Profile leaderProfile = API.getProfile(leader);
+        Player leaderPlayer = Bukkit.getPlayer(leader);
 
-    if (bypass || leaderProfile.hasCooldownEnded("party_advertise")) {
-        if (!bypass) {
-            leaderProfile.addCooldown("party_advertise", 300_000);
-        }
+        if (leaderProfile == null) return false;
+
+        boolean bypass = leaderPlayer != null && leaderPlayer.hasPermission("neptune.partycooldownbypass");
+
+        if (bypass || leaderProfile.hasCooldownEnded("party_advertise")) {
+            if (!bypass) {
+                leaderProfile.addCooldown("party_advertise", 300_000);
+            }
 
             setOpen(true);
+
             for (Profile profile : ProfileService.get().profiles.values()) {
                 TextComponent join = new ClickableComponent(
                         MessagesLocale.PARTY_ADVERTISE_JOIN.getString(),
@@ -186,5 +193,4 @@ public class Party {
 
         return false;
     }
-
 }

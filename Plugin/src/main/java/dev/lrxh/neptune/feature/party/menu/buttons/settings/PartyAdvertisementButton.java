@@ -13,7 +13,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.ItemStack;
 
-
 public class PartyAdvertisementButton extends Button {
     private final Party party;
 
@@ -21,7 +20,6 @@ public class PartyAdvertisementButton extends Button {
         super(slot);
         this.party = party;
     }
-
 
     @Override
     public void onClick(ClickType type, Player player) {
@@ -37,16 +35,24 @@ public class PartyAdvertisementButton extends Button {
         Profile profile = API.getProfile(player);
 
         boolean bypass = player.hasPermission("neptune.partycooldownbypass");
+        boolean ended = profile == null || profile.hasCooldownEnded("party_advertise");
 
         return new ItemBuilder(MenusLocale.PARTY_SETTINGS_ADVERTISEMENTS_MATERIAL.getString())
-                 .name(MenusLocale.PARTY_SETTINGS_ADVERTISEMENTS_TITLE.getString())
-                 .lore((bypass || profile.hasCooldownEnded("party_advertise"))
-                                 ? MenusLocale.PARTY_SETTINGS_ADVERTISEMENTS_LORE_NO_COOLDOWN.getStringList()
-                                 : ItemUtils.getLore(
-                                         MenusLocale.PARTY_SETTINGS_ADVERTISEMENTS_LORE_COOLDOWN.getStringList(),
-                                         new Replacement("<cooldown>", profile.getCooldowns().get("party_advertise").formatMinutesSeconds())
-                                 ),
-                      player
-                 )
+                .name(MenusLocale.PARTY_SETTINGS_ADVERTISEMENTS_TITLE.getString())
+                .lore(
+                        (bypass || ended)
+                                ? MenusLocale.PARTY_SETTINGS_ADVERTISEMENTS_LORE_NO_COOLDOWN.getStringList()
+                                : ItemUtils.getLore(
+                                        MenusLocale.PARTY_SETTINGS_ADVERTISEMENTS_LORE_COOLDOWN.getStringList(),
+                                        new Replacement(
+                                                "<cooldown>",
+                                                (profile.getCooldowns() != null && profile.getCooldowns().containsKey("party_advertise"))
+                                                        ? profile.getCooldowns().get("party_advertise").formatMinutesSeconds()
+                                                        : "0:00"
+                                        )
+                                ),
+                        player
+                )
                 .build();
+    }
 }

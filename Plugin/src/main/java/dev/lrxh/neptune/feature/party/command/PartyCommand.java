@@ -6,7 +6,9 @@ import com.jonahseguin.drink.annotation.Sender;
 import dev.lrxh.neptune.API;
 import dev.lrxh.neptune.configs.impl.MessagesLocale;
 import dev.lrxh.neptune.feature.party.Party;
+import dev.lrxh.neptune.feature.party.impl.EventType;
 import dev.lrxh.neptune.feature.party.impl.PartyRequest;
+import dev.lrxh.neptune.feature.party.menu.PartyEventsKitMenu;
 import dev.lrxh.neptune.profile.data.ProfileState;
 import dev.lrxh.neptune.profile.impl.Profile;
 import dev.lrxh.neptune.providers.clickable.Replacement;
@@ -100,15 +102,13 @@ public class PartyCommand {
         }
 
         if (targetProfile.getGameData().getParty() != null) {
-            MessagesLocale.PARTY_ALREADY_PARTY.send(player.getUniqueId(),
-                    new Replacement("<player>", target.getName()));
+            MessagesLocale.PARTY_ALREADY_PARTY.send(player.getUniqueId(), new Replacement("<player>", target.getName()));
             return;
         }
 
         if (profile.getGameData().getRequests().contains(player.getUniqueId()) ||
                 targetProfile.getGameData().getRequests().contains(player.getUniqueId())) {
-            MessagesLocale.PARTY_ALREADY_SENT.send(player.getUniqueId(),
-                    new Replacement("<player>", target.getName()));
+            MessagesLocale.PARTY_ALREADY_SENT.send(player.getUniqueId(), new Replacement("<player>", target.getName()));
             return;
         }
 
@@ -118,8 +118,7 @@ public class PartyCommand {
         }
 
         party.invite(target.getUniqueId());
-        MessagesLocale.PARTY_INVITED.send(player.getUniqueId(),
-                new Replacement("<player>", target.getName()));
+        MessagesLocale.PARTY_INVITED.send(player.getUniqueId(), new Replacement("<player>", target.getName()));
     }
 
     @Command(name = "accept", desc = "", usage = "<uuid>")
@@ -182,42 +181,43 @@ public class PartyCommand {
     public void ffa(@Sender Player player) {
         Profile profile = API.getProfile(player);
         Party party = profile.getGameData().getParty();
+
         if (party == null) {
-           MessagesLocale.PARTY_NOT_IN.send(player.getUniqueId());
-           return;
+            MessagesLocale.PARTY_NOT_IN.send(player.getUniqueId());
+            return;
         }
-       if (!party.getLeader().equals(player.getUniqueId())) {
-           MessagesLocale.PARTY_NO_PERMISSION.send(player.getUniqueId());
-           return;
-       }
-       if (party.getUsers().size() < 2) {
-           MessagesLocale.PARTY_NOT_ENOUGH_MEMBERS.send(player.getUniqueId());
-           return;
-       }
+        if (!party.getLeader().equals(player.getUniqueId())) {
+            MessagesLocale.PARTY_NO_PERMISSION.send(player.getUniqueId());
+            return;
+        }
+        if (party.getUsers().size() < 2) {
+            MessagesLocale.PARTY_NOT_ENOUGH_MEMBERS.send(player.getUniqueId());
+            return;
+        }
 
-       new PartyEventsKitMenu(party, EventType.FFA).open(player);
+        new PartyEventsKitMenu(party, EventType.FFA).open(player);
     }
 
-@Command(name = "split", desc = "")
-public void split(@Sender Player player) {
-    Profile profile = API.getProfile(player);
-    Party party = profile.getGameData().getParty();
-    if (party == null) {
-        MessagesLocale.PARTY_NOT_IN.send(player.getUniqueId());
-        return;
-    }
-    if (!party.getLeader().equals(player.getUniqueId())) {
-        MessagesLocale.PARTY_NO_PERMISSION.send(player.getUniqueId());
-        return;
-    }
-    if (party.getUsers().size() < 2) {
-        MessagesLocale.PARTY_NOT_ENOUGH_MEMBERS.send(player.getUniqueId());
-        return;
-    }
+    @Command(name = "split", desc = "")
+    public void split(@Sender Player player) {
+        Profile profile = API.getProfile(player);
+        Party party = profile.getGameData().getParty();
 
-    new PartyEventsKitMenu(party, EventType.TEAM).open(player);
-}
+        if (party == null) {
+            MessagesLocale.PARTY_NOT_IN.send(player.getUniqueId());
+            return;
+        }
+        if (!party.getLeader().equals(player.getUniqueId())) {
+            MessagesLocale.PARTY_NO_PERMISSION.send(player.getUniqueId());
+            return;
+        }
+        if (party.getUsers().size() < 2) {
+            MessagesLocale.PARTY_NOT_ENOUGH_MEMBERS.send(player.getUniqueId());
+            return;
+        }
 
+        new PartyEventsKitMenu(party, EventType.TEAM).open(player);
+    }
 
     @Command(name = "advertise", desc = "")
     @Require("neptune.party.advertise")

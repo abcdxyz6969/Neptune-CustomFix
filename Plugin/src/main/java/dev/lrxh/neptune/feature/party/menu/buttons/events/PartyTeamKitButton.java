@@ -9,6 +9,8 @@ import dev.lrxh.neptune.game.match.MatchService;
 import dev.lrxh.neptune.game.match.impl.ffa.PartyFfaFightMatch;
 import dev.lrxh.neptune.game.match.impl.participant.Participant;
 import dev.lrxh.neptune.game.match.impl.participant.ParticipantColor;
+import dev.lrxh.neptune.game.match.impl.team.MatchTeam;
+import dev.lrxh.neptune.game.match.impl.team.PartyTeamFightMatch;
 import dev.lrxh.neptune.utils.ItemBuilder;
 import dev.lrxh.neptune.utils.menu.Button;
 import org.bukkit.Bukkit;
@@ -55,6 +57,50 @@ public class PartyTeamKitButton extends Button {
 
                 Bukkit.getScheduler().runTask(Neptune.get(), () -> {
                     MatchService.get().startMatch(new PartyFfaFightMatch(arena, kit, participants, true));
+                });
+            });
+
+            return;
+        }
+
+        // Party Split (TEAM) with Glow Teams
+        if (eventType == EventType.TEAM) {
+
+            // split members into 2 teams
+            List<Participant> teamAPlayers = new ArrayList<>();
+            List<Participant> teamBPlayers = new ArrayList<>();
+
+            for (int i = 0; i < participants.size(); i++) {
+                Participant p = participants.get(i);
+                if (i % 2 == 0) {
+                    p.setColor(ParticipantColor.RED);
+                    teamAPlayers.add(p);
+                } else {
+                    p.setColor(ParticipantColor.BLUE);
+                    teamBPlayers.add(p);
+                }
+            }
+
+            MatchTeam teamA = new MatchTeam(teamAPlayers);
+            MatchTeam teamB = new MatchTeam(teamBPlayers);
+            teamA.setOpponentTeam(teamB);
+            teamB.setOpponentTeam(teamA);
+
+            kit.getRandomArena().thenAccept(arena -> {
+                if (arena == null) return;
+                if (!arena.isSetup() || !arena.isDoneLoading()) return;
+
+                Bukkit.getScheduler().runTask(Neptune.get(), () -> {
+                    MatchService.get().startMatch(
+                            new PartyTeamFightMatch(
+                                    arena,
+                                    kit,
+                                    participants,
+                                    teamA,
+                                    teamB,
+                                    party
+                            )
+                    );
                 });
             });
 

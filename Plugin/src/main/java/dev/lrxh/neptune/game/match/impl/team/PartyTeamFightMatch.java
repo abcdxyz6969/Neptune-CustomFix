@@ -1,5 +1,6 @@
 package dev.lrxh.neptune.game.match.impl.team;
 
+import dev.lrxh.api.match.participant.IParticipant;
 import dev.lrxh.neptune.feature.party.Party;
 import dev.lrxh.neptune.game.arena.Arena;
 import dev.lrxh.neptune.game.kit.Kit;
@@ -53,9 +54,9 @@ public class PartyTeamFightMatch extends TeamFightMatch {
         super.onLeave(participant, quit);
     }
 
-    /* ===================== GLOW LOGIC ===================== */
-
     private void applyGlow() {
+        if (glowBoard != null) return;
+
         glowBoard = Bukkit.getScoreboardManager().getNewScoreboard();
 
         Team red = glowBoard.registerNewTeam("party_red");
@@ -64,13 +65,14 @@ public class PartyTeamFightMatch extends TeamFightMatch {
         Team blue = glowBoard.registerNewTeam("party_blue");
         blue.setColor(org.bukkit.ChatColor.BLUE);
 
-        for (Participant participant : getParticipants()) {
+        for (IParticipant ip : getParticipants()) {
+            Participant participant = (Participant) ip;
             Player player = participant.getPlayer();
             if (player == null) continue;
 
             oldBoards.put(participant.getPlayerUUID(), player.getScoreboard());
 
-            if (getParticipantTeam(participant).equals(getTeamA())) {
+            if (getParticipantTeam(ip).equals(getTeamA())) {
                 red.addEntry(player.getName());
             } else {
                 blue.addEntry(player.getName());
@@ -84,7 +86,8 @@ public class PartyTeamFightMatch extends TeamFightMatch {
     private void clearGlow() {
         if (glowBoard == null) return;
 
-        for (Participant participant : getParticipants()) {
+        for (IParticipant ip : getParticipants()) {
+            Participant participant = (Participant) ip;
             Player player = participant.getPlayer();
             if (player == null) continue;
 
